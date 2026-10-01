@@ -138,6 +138,10 @@ export function createJob(payload: DownloadTokenPayload, owner: string): Job {
   return job;
 }
 
+export function jobStats() {
+  return { running: store.running, queued: store.queue.length, max: config.maxConcurrentJobs, maxQueue: config.maxQueuedJobs };
+}
+
 export function getJob(id: string): Job | undefined {
   if (typeof id !== "string" || !/^[A-Za-z0-9_-]{16,32}$/.test(id)) return undefined;
   return store.jobs.get(id);

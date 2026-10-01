@@ -24,7 +24,8 @@ Browser ──POST /api/resolve {url}──▶ validate + canonicalise URL (src/
 - **Signed tokens**: the client can only download options the server offered. It can't send arbitrary URLs or yt-dlp format expressions.
 - **Strict URL allowlist**: only known hostnames and path shapes for each platform are accepted, and URLs are rebuilt in canonical form before reaching yt-dlp. yt-dlp runs via `spawn` with an argument array (no shell), and the URL is always passed after `--`.
 - **No watermarks**: TikTok's watermarked "download" rendition is filtered out, so only clean playback streams are offered.
-- **Rate limiting**: token buckets per client IP (resolve 20/min, jobs 10/min, thumbnails 120/min), max 2 active jobs per client, plus a global concurrency cap and queue limit.
+- **Load protection**: global caps on concurrent fetches (`YOINK_MAX_CONCURRENT_RESOLVES`) and downloads (`YOINK_MAX_CONCURRENT_JOBS`), each with a bounded queue. Overflow gets a fast `503 BUSY` with `Retry-After` instead of spawning unbounded yt-dlp processes. Identical links share one in-flight extraction plus a 5-minute cache, so a viral link costs one yt-dlp run.
+- **Rate limiting**: per-client-IP token buckets (resolve 20/min, jobs 10/min, thumbnails 120/min), max 2 active jobs per client. Set `YOINK_CLIENT_IP_HEADER` or `YOINK_TRUSTED_PROXY_HOPS` for your proxy (see below). Otherwise clients can spoof their IP.
 - **Thumbnail proxy**: Instagram/TikTok CDNs block hotlinking, so `/api/thumb` proxies images from an allowlist of CDN domains only. HTTPS only, redirects refused, image types only, 5 MB cap.
 - **Security headers**: CSP, `frame-ancestors 'none'`, nosniff, HSTS (prod), plus same-origin checks on POST APIs.
 - **Respectful by design**: public content only. Private/login-walled/DRM/live content returns a clear error and is never faked. There are Terms, Privacy and Copyright/DMCA pages.
@@ -49,7 +50,7 @@ cp .env.example .env.local   # optional in dev
 npm run dev
 ```
 
-- `npm test`: unit tests (URL validation)
+- `npm test`: unit tests (URL validation, concurrency limiter)
 - `npm run typecheck` / `npm run lint`
 - `npm run build && npm start`: production build
 
@@ -62,14 +63,40 @@ yoink needs a long-running Node server with yt-dlp, ffmpeg and local disk. Serve
 ```bash
 docker build -t yoink .
 docker run -p 3000:3000 -e YOINK_SECRET="$(openssl rand -base64 48)" \
-  -e NEXT_PUBLIC_SITE_URL=https://your.domain -e YOINK_TRUST_PROXY=true yoink
+  -e NEXT_PUBLIC_SITE_URL=https://your.domain -e YOINK_CLIENT_IP_HEADER=cf-connecting-ip yoink
 ```
+
+**Client IP**: per-IP limits only work if the server knows the real client IP. Behind Cloudflare, set `YOINK_CLIENT_IP_HEADER=cf-connecting-ip`. Behind a single nginx/Caddy/platform load balancer that appends to `X-Forwarded-For`, set `YOINK_TRUSTED_PROXY_HOPS=1`. Don't expose the Node server directly.
+
+**Sizing**: each fetch is a short-lived yt-dlp process (~50–100 MB RAM, a few seconds). Each download adds ffmpeg (CPU) and passes the file through the server twice (bandwidth). A starting point for a 4 vCPU / 8 GB box is `YOINK_MAX_CONCURRENT_RESOLVES=10` and `YOINK_MAX_CONCURRENT_JOBS=6`. Measure with the load test and adjust.
 
 `NEXT_PUBLIC_*` variables are inlined at build time, so pass them as build args or set them in the build environment as well.
 
 Job state, rate limits and the resolve cache are kept **in process memory**, so run a single instance (scale vertically with `YOINK_MAX_CONCURRENT_JOBS`). To scale horizontally, move `rate-limit.ts` and `jobs.ts` state to Redis and use shared storage for the temp files.
 
 See `.env.example` for all configuration options.
+
+## Load testing
+
+`scripts/load-test.mjs` simulates users doing paste → fetch (and optionally → download) against any deployment and prints latency percentiles, error breakdowns and live server queue depth from `/api/health`.
+
+```bash
+npm run loadtest -- --base http://localhost:3000 --users 50 --duration 60
+npm run loadtest -- --base https://staging.your.domain --users 20 --mode full --pick smallest
+```
+
+- Every fetch hits the real platforms. Keep runs modest, because hammering YouTube/Instagram from one IP can get that IP blocked by them.
+- By default each virtual user sends its own `X-Forwarded-For` IP. If the target uses `YOINK_CLIENT_IP_HEADER`, pass the same header with `--ip-header`.
+- Run the server with `YOINK_RESOLVE_CACHE_TTL_MS=0` to measure uncached extraction (worst case). With the cache on, repeated links are near-instant.
+- The `rss` figure is the Node process only. yt-dlp/ffmpeg child processes use additional memory.
+
+Reference results on a laptop (8 cores, home connection):
+
+| Scenario | Result |
+| --- | --- |
+| 20 users, distinct links, cache off | 100% ok, ~2.2 extractions/s, p50 4.7s / p99 10.2s, never more than 6 yt-dlp processes |
+| 30 users vs. caps of 2 running + 5 queued | 67% ok, rest got a clean `503 BUSY` with no runaway processes |
+| 150 users, one viral link, cache on | 2,113 requests in 21s, 100% ok, p50 15ms, one yt-dlp run total |
 
 ## Known limitations
 

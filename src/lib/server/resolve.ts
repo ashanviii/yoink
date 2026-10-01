@@ -5,6 +5,7 @@ import type { ParsedMediaUrl } from "@/lib/url";
 import { config } from "./config";
 import { createDownloadToken } from "./token";
 import { classifyFailure, ytdlp } from "./ytdlp";
+import { Semaphore } from "./semaphore";
 import { thumbnailProxyUrl } from "./thumbnails";
 
 /** The subset of yt-dlp's info JSON we rely on. */
@@ -259,8 +260,13 @@ interface CacheEntry {
 }
 const globalForCache = globalThis as unknown as { __yoinkResolveCache?: Map<string, CacheEntry> };
 const cache = (globalForCache.__yoinkResolveCache ??= new Map());
-const CACHE_TTL_MS = 5 * 60_000;
 const inflight = new Map<string, Promise<ResolveResponse>>();
+const globalForLimit = globalThis as unknown as { __yoinkResolveSlots?: Semaphore };
+export const resolveSlots = (globalForLimit.__yoinkResolveSlots ??= new Semaphore(
+  config.maxConcurrentResolves,
+  config.maxQueuedResolves,
+  config.resolveQueueWaitMs,
+));
 
 export async function resolveMedia(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
   const hit = cache.get(parsed.url);
@@ -277,7 +283,9 @@ export async function resolveMedia(parsed: ParsedMediaUrl): Promise<ResolveRespo
     for (const [key, entry] of cache) if (entry.expires <= Date.now()) cache.delete(key);
     if (cache.size > 500) cache.clear();
   }
-  cache.set(parsed.url, { value, expires: Date.now() + CACHE_TTL_MS });
+  if (config.resolveCacheTtlMs > 0) {
+    cache.set(parsed.url, { value, expires: Date.now() + config.resolveCacheTtlMs });
+  }
   return value;
 }
 
@@ -289,7 +297,11 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
     ...(allowCarousel ? ["--yes-playlist", "--playlist-items", `1:${MAX_CAROUSEL_ITEMS}`] : ["--no-playlist"]),
   ];
 
-  const result = await ytdlp(args, parsed.url, { timeoutMs: config.resolveTimeoutMs, maxStdoutBytes: 32 * 1024 * 1024 });
+  // Identical links share one in-flight request (see resolveMedia), so a viral
+  // link costs one yt-dlp run; the semaphore bounds how many distinct links run at once.
+  const result = await resolveSlots.run(() =>
+    ytdlp(args, parsed.url, { timeoutMs: config.resolveTimeoutMs, maxStdoutBytes: 32 * 1024 * 1024 }),
+  );
   if (result.code !== 0) throw classifyFailure(result);
 
   let info: RawInfo;

@@ -58,18 +58,33 @@ export const limiters: Limiters = (globalForLimits.__yoinkLimiters ??= {
   thumb: new RateLimiter(120, 60_000),
 });
 
+let warnedUnsafeIp = false;
+
 /**
- * Best-effort client identifier. Behind a trusted proxy we take the original
- * client from X-Forwarded-For; otherwise we take the last hop, which the Next
- * server itself appends and the client cannot forge.
+ * Client identifier for per-IP limits. Next.js only sets X-Forwarded-For when
+ * the client didn't send one, so the header is trustworthy only when a proxy
+ * you control overwrites or appends to it — see config.clientIpHeader/trustedProxyHops.
  */
 export function clientKey(request: Request): string {
+  if (config.clientIpHeader) {
+    return request.headers.get(config.clientIpHeader)?.split(",")[0]?.trim() || "unknown";
+  }
+
   const hops = (request.headers.get("x-forwarded-for") ?? "")
     .split(",")
     .map((hop) => hop.trim())
     .filter(Boolean);
-  if (config.trustProxy) {
-    return hops[0] ?? request.headers.get("x-real-ip")?.trim() ?? "unknown";
+
+  if (config.trustedProxyHops > 0) {
+    // Each trusted proxy appends the address it saw; anything further left is client-supplied.
+    return hops[hops.length - config.trustedProxyHops] ?? hops[0] ?? "unknown";
   }
-  return hops.at(-1) ?? "unknown";
+
+  if (process.env.NODE_ENV === "production" && !warnedUnsafeIp) {
+    warnedUnsafeIp = true;
+    console.warn(
+      "[yoink] Neither YOINK_CLIENT_IP_HEADER nor YOINK_TRUSTED_PROXY_HOPS is set — per-IP rate limits can be bypassed. Global caps still apply.",
+    );
+  }
+  return hops[0] ?? "unknown";
 }
