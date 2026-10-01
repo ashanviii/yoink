@@ -1,0 +1,103 @@
+"use client";
+
+import { useId, useState } from "react";
+import { formatDuration } from "@/lib/format";
+import type { MediaItem, OptionKind } from "@/lib/media-types";
+import { FilmIcon, MusicIcon } from "./icons";
+import { OptionRow } from "./OptionRow";
+
+interface Props {
+  item: MediaItem;
+  uploader: string | null;
+  index: number;
+  total: number;
+}
+
+export function ResultCard({ item, uploader, index, total }: Props) {
+  const [tab, setTab] = useState<OptionKind>("video");
+  const tabsId = useId();
+  const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
+  const active = kinds.includes(tab) ? tab : kinds[0];
+  const duration = formatDuration(item.durationSec);
+  const portrait = item.width && item.height ? item.height > item.width : false;
+
+  return (
+    <article
+      className="animate-rise overflow-hidden rounded-3xl border border-border bg-surface/80 shadow-card backdrop-blur"
+      style={{ animationDelay: `${index * 70}ms` }}
+    >
+      <div className="grid gap-4 p-3 sm:grid-cols-[minmax(0,220px)_1fr] sm:p-4">
+        <div
+          className={`relative overflow-hidden rounded-2xl bg-surface-2 ${portrait ? "mx-auto aspect-[9/16] max-h-80 w-auto sm:max-h-none sm:w-full" : "aspect-video"}`}
+        >
+          {item.thumbnail ? (
+            // Thumbnails come from our same-origin proxy and vary per platform; next/image adds nothing here.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.thumbnail} alt="" loading="lazy" decoding="async" className="size-full object-cover" />
+          ) : (
+            <div className="grid size-full place-items-center text-muted">
+              <FilmIcon size={32} />
+            </div>
+          )}
+          {duration && (
+            <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-semibold text-white">
+              {duration}
+            </span>
+          )}
+          {total > 1 && (
+            <span className="absolute left-2 top-2 rounded-full bg-accent px-2 py-0.5 text-xs font-bold text-accent-ink">
+              {index + 1}/{total}
+            </span>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-3">
+          <div className="px-1 pt-1">
+            <h2 className="line-clamp-2 font-display text-xl font-bold leading-tight">{item.title}</h2>
+            {uploader && <p className="mt-1 truncate text-sm text-muted">by {uploader}</p>}
+          </div>
+
+          {kinds.length > 1 && (
+            <div role="tablist" aria-label="Format" className="inline-flex w-fit rounded-full bg-surface-2 p-1">
+              {kinds.map((kind) => (
+                <button
+                  key={kind}
+                  role="tab"
+                  type="button"
+                  id={`${tabsId}-${kind}`}
+                  aria-selected={active === kind}
+                  aria-controls={`${tabsId}-panel-${kind}`}
+                  onClick={() => setTab(kind)}
+                  className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
+                    active === kind ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"
+                  }`}
+                >
+                  {kind === "video" ? <FilmIcon size={15} /> : <MusicIcon size={15} />}
+                  {kind === "video" ? "Video" : "Audio"}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Both panels stay mounted so a running download keeps its progress when switching tabs. */}
+          {kinds.map((kind) => (
+            <ul
+              key={kind}
+              id={`${tabsId}-panel-${kind}`}
+              role="tabpanel"
+              aria-labelledby={`${tabsId}-${kind}`}
+              hidden={kind !== active}
+              className="flex flex-col gap-2"
+            >
+              {item.options
+                .filter((o) => o.kind === kind)
+                .map((option) => (
+                  <OptionRow key={option.token} option={option} />
+                ))}
+            </ul>
+          ))}
+        </div>
+      </div>
+    </article>
+  );
+}

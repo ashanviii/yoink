@@ -1,0 +1,169 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg: #f6f4ee;
+  --surface: #ffffff;
+  --surface-2: #efece4;
+  --text: #0e0e11;
+  --muted: #5d5b66;
+  --border: #e2ded3;
+  --accent: #c6ff3d;
+  --accent-ink: #0e0e11;
+  --pop: #7c5cff;
+  --hot: #ff4fa3;
+  --danger: #e5383b;
+  --ring: #7c5cff;
+  --shadow: 0 1px 0 rgb(0 0 0 / 0.04), 0 12px 32px -12px rgb(20 16 40 / 0.18);
+  color-scheme: light;
+}
+
+.dark {
+  --bg: #0b0b0f;
+  --surface: #15151c;
+  --surface-2: #1d1d26;
+  --text: #f4f3f8;
+  --muted: #a09fb0;
+  --border: #2a2a36;
+  --accent: #c6ff3d;
+  --accent-ink: #0b0b0f;
+  --pop: #9b85ff;
+  --hot: #ff6cb5;
+  --danger: #ff5c5f;
+  --ring: #c6ff3d;
+  --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.7);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-pop: var(--pop);
+  --color-hot: var(--hot);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+  --shadow-card: var(--shadow);
+
+  --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-stripes: stripes 0.8s linear infinite;
+  --animate-pop: pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
+  --animate-float: float 6s ease-in-out infinite;
+
+  @keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(3px); }
+    30%, 50%, 70% { transform: translateX(-5px); }
+    40%, 60% { transform: translateX(5px); }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(12px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes stripes {
+    from { background-position: 0 0; }
+    to { background-position: 28px 0; }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.6); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+    50% { transform: translateY(-8px) rotate(var(--r, 0deg)); }
+  }
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.font-display {
+  font-family: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
+  letter-spacing: -0.035em;
+}
+
+/* Hand-drawn style marker behind highlighted words */
+.marker {
+  background: linear-gradient(transparent 58%, var(--accent) 58%, var(--accent) 92%, transparent 92%);
+  padding: 0 0.12em;
+  border-radius: 0.15em;
+}
+.dark .marker {
+  background: none;
+  color: var(--accent);
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 37%, var(--surface-2) 63%);
+  background-size: 400% 100%;
+  animation: var(--animate-shimmer);
+}
+
+.progress-stripes {
+  background-image: linear-gradient(
+    -45deg,
+    rgb(0 0 0 / 0.12) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgb(0 0 0 / 0.12) 50%,
+    rgb(0 0 0 / 0.12) 75%,
+    transparent 75%
+  );
+  background-size: 28px 28px;
+  animation: var(--animate-stripes);
+}
+
+.grain::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.35;
+  background:
+    radial-gradient(60rem 30rem at 85% -10%, color-mix(in oklab, var(--pop) 22%, transparent), transparent 70%),
+    radial-gradient(50rem 26rem at -10% 10%, color-mix(in oklab, var(--accent) 26%, transparent), transparent 70%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

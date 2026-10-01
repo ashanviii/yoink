@@ -1,0 +1,75 @@
+import "server-only";
+import { AppError } from "@/lib/errors";
+import { config } from "./config";
+
+interface Bucket {
+  tokens: number;
+  updatedAt: number;
+}
+
+/**
+ * In-memory token bucket. yoink runs as a single long-lived Node process (it
+ * needs local yt-dlp/ffmpeg), so process memory is the right scope. Swap this
+ * for Redis if you ever scale horizontally.
+ */
+export class RateLimiter {
+  private readonly buckets = new Map<string, Bucket>();
+  private readonly refillPerMs: number;
+
+  constructor(
+    private readonly capacity: number,
+    windowMs: number,
+  ) {
+    this.refillPerMs = capacity / windowMs;
+  }
+
+  /** Consumes one token for `key` or throws a RATE_LIMITED AppError. */
+  consume(key: string): void {
+    const now = Date.now();
+    const bucket = this.buckets.get(key) ?? { tokens: this.capacity, updatedAt: now };
+    bucket.tokens = Math.min(this.capacity, bucket.tokens + (now - bucket.updatedAt) * this.refillPerMs);
+    bucket.updatedAt = now;
+
+    if (bucket.tokens < 1) {
+      this.buckets.set(key, bucket);
+      const retryAfter = Math.ceil((1 - bucket.tokens) / this.refillPerMs / 1000);
+      throw new AppError("RATE_LIMITED", undefined, { retryAfter });
+    }
+    bucket.tokens -= 1;
+    this.buckets.set(key, bucket);
+
+    if (this.buckets.size > 50_000) this.sweep(now);
+  }
+
+  private sweep(now: number): void {
+    for (const [key, bucket] of this.buckets) {
+      if ((now - bucket.updatedAt) * this.refillPerMs >= this.capacity) this.buckets.delete(key);
+    }
+  }
+}
+
+type Limiters = { resolve: RateLimiter; job: RateLimiter; thumb: RateLimiter };
+
+// Survive dev hot reloads without resetting counters.
+const globalForLimits = globalThis as unknown as { __yoinkLimiters?: Limiters };
+export const limiters: Limiters = (globalForLimits.__yoinkLimiters ??= {
+  resolve: new RateLimiter(20, 60_000),
+  job: new RateLimiter(10, 60_000),
+  thumb: new RateLimiter(120, 60_000),
+});
+
+/**
+ * Best-effort client identifier. Behind a trusted proxy we take the original
+ * client from X-Forwarded-For; otherwise we take the last hop, which the Next
+ * server itself appends and the client cannot forge.
+ */
+export function clientKey(request: Request): string {
+  const hops = (request.headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((hop) => hop.trim())
+    .filter(Boolean);
+  if (config.trustProxy) {
+    return hops[0] ?? request.headers.get("x-real-ip")?.trim() ?? "unknown";
+  }
+  return hops.at(-1) ?? "unknown";
+}
