@@ -1,98 +1,221 @@
 # yoink
 
-A mobile-first media downloader for **Instagram** (Reels, Stories, video posts and carousels), **YouTube** (videos up to 4K, Shorts, MP3/M4A), **TikTok** (without watermark) and **Pinterest** videos.
+A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **YouTube** (videos, Shorts, MP3/M4A), **TikTok** (no watermark), and **Pinterest** videos.
 
-Flow: paste link → fetch → pick quality/format → download.
+**Flow:** Paste URL → fetch → pick quality/format → download.
 
-## Stack
+---
 
-- **Next.js 16** (App Router), React 19, TypeScript, Tailwind CSS v4
-- **yt-dlp** for extraction, **ffmpeg** for merging high-res streams and audio conversion
-- Zod for input validation, Vitest for tests
+## 🎯 Features
 
-## How it works
+- **Multi-platform:** Instagram, YouTube (4K support), TikTok (watermark-free), Pinterest
+- **Mobile-first UI:** Works great on phones; desktop too
+- **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
+- **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
+- **SEO optimized:** Platform landing pages, structured data, Open Graph cards
+- **Self-hosted:** Full control; public content only (private/login-walled content is refused)
+- **Easily deployable:** Docker Compose + automatic HTTPS (Caddy)
 
-```
-Browser ──POST /api/resolve {url}──▶ validate + canonicalise URL (src/lib/url.ts)
-                                     yt-dlp --dump-single-json
-                                     ◀── items + quality options, each with an HMAC-signed token
-        ──POST /api/jobs {token}───▶ verify token → queue job (concurrency-capped)
-        ──GET  /api/jobs/:id───────▶ poll progress (downloading → processing → ready)
-        ──GET  /api/jobs/:id/file──▶ stream the finished file (deleted after YOINK_FILE_TTL_MS)
-```
+---
 
-- **Signed tokens**: the client can only download options the server offered. It can't send arbitrary URLs or yt-dlp format expressions.
-- **Strict URL allowlist**: only known hostnames and path shapes for each platform are accepted, and URLs are rebuilt in canonical form before reaching yt-dlp. yt-dlp runs via `spawn` with an argument array (no shell), and the URL is always passed after `--`.
-- **No watermarks**: TikTok's watermarked "download" rendition is filtered out, so only clean playback streams are offered.
-- **Load protection**: global caps on concurrent fetches (`YOINK_MAX_CONCURRENT_RESOLVES`) and downloads (`YOINK_MAX_CONCURRENT_JOBS`), each with a bounded queue. Overflow gets a fast `503 BUSY` with `Retry-After` instead of spawning unbounded yt-dlp processes. Identical links share one in-flight extraction plus a 5-minute cache, so a viral link costs one yt-dlp run.
-- **Rate limiting**: per-client-IP token buckets (resolve 20/min, jobs 10/min, thumbnails 120/min), max 2 active jobs per client. Set `YOINK_CLIENT_IP_HEADER` or `YOINK_TRUSTED_PROXY_HOPS` for your proxy (see below). Otherwise clients can spoof their IP.
-- **Thumbnail proxy**: Instagram/TikTok CDNs block hotlinking, so `/api/thumb` proxies images from an allowlist of CDN domains only. HTTPS only, redirects refused, image types only, 5 MB cap.
-- **Security headers**: CSP, `frame-ancestors 'none'`, nosniff, HSTS (prod), plus same-origin checks on POST APIs.
-- **Respectful by design**: public content only. Private/login-walled/DRM/live content returns a clear error and is never faked. There are Terms, Privacy and Copyright/DMCA pages.
+## 🚀 Quick Start
 
-## SEO
+### Local Development (5 minutes)
 
-- Platform landing pages (`src/lib/landing-pages.ts`), each with a unique title, description, H1, how-to steps, features and FAQ
-- JSON-LD: `WebSite`, `WebApplication`, `HowTo`, `FAQPage`, `BreadcrumbList`
-- `sitemap.xml`, `robots.txt`, canonical URLs, Open Graph/Twitter cards with a generated OG image, web manifest
-- Statically prerendered pages. The only client JS is the downloader widget and the theme toggle.
-
-To add a landing page, append an entry to `LANDING_PAGES`. The route, sitemap entry and structured data are generated from it.
-
-## Local development
-
-Requirements: Node 20+ and Python 3.10+.
+**Requirements:** Node 20+, Python 3.10+
 
 ```bash
-python -m pip install -U "yt-dlp[default,curl-cffi]"
+# Install dependencies
 npm install
-cp .env.example .env.local   # optional in dev
+
+# Install yt-dlp
+python -m pip install -U "yt-dlp[default,curl-cffi]"
+
+# Copy example env (optional in dev)
+cp .env.example .env.local
+
+# Start dev server at http://localhost:3000
 npm run dev
 ```
 
-- `npm test`: unit tests (URL validation, concurrency limiter)
-- `npm run typecheck` / `npm run lint`
-- `npm run build && npm start`: production build
+**Commands:**
+- `npm test` — Run unit tests (URL validation, concurrency limiter)
+- `npm run typecheck` — Type check
+- `npm run lint` — Lint
+- `npm run build && npm start` — Production build and run
 
-Keep yt-dlp up to date (`pip install -U yt-dlp`). Platforms change their sites often and yt-dlp ships fixes quickly.
+---
 
-## Deployment
+## 📦 Deployment
 
-yoink needs a long-running Node server with yt-dlp, ffmpeg and local disk. Serverless platforms (e.g. Vercel functions) won't work.
+### Option 1: Docker Compose (Recommended for production)
 
-**Step-by-step free deployment (Oracle Cloud + Docker Compose + automatic HTTPS): see [DEPLOY.md](DEPLOY.md).** `docker-compose.yml` runs yoink behind Caddy, and the container updates yt-dlp on every start.
+Deploys yoink + Caddy (automatic HTTPS) with one command.
 
-Or run the image directly:
+**Prerequisites:**
+- Docker + Docker Compose installed
+- A domain (or DuckDNS subdomain)
+- `.env` file configured
+
+**Setup:**
+
+```bash
+cp .env.example .env
+# Edit .env with your domain and configuration
+nano .env
+
+# Start the services
+docker compose up -d --build
+```
+
+Check status:
+```bash
+docker compose ps
+docker compose logs -f yoink  # Watch yoink startup
+```
+
+Visit `https://YOUR_DOMAIN` 🎉
+
+The container updates yt-dlp on every start. For a full first-time walkthrough (server, firewall, domain), see [DEPLOY.md](DEPLOY.md).
+
+### Option 2: Docker (standalone)
+
+Run just the yoink container without Caddy:
 
 ```bash
 docker build -t yoink .
-docker run -p 3000:3000 -e YOINK_SECRET="$(openssl rand -base64 48)" \
-  -e NEXT_PUBLIC_SITE_URL=https://your.domain -e YOINK_CLIENT_IP_HEADER=cf-connecting-ip yoink
+
+docker run -p 3000:3000 \
+  -e YOINK_SECRET="$(openssl rand -base64 48)" \
+  -e NEXT_PUBLIC_SITE_URL=https://your.domain \
+  -e YOINK_CLIENT_IP_HEADER=cf-connecting-ip \
+  yoink
 ```
 
-**Client IP**: per-IP limits only work if the server knows the real client IP. Behind Cloudflare, set `YOINK_CLIENT_IP_HEADER=cf-connecting-ip`. Behind a single nginx/Caddy/platform load balancer that appends to `X-Forwarded-For`, set `YOINK_TRUSTED_PROXY_HOPS=1`. Don't expose the Node server directly.
+You'll need to:
+- Set up reverse proxy (nginx, Caddy) in front for HTTPS
+- Handle rate limiting correctly with `YOINK_CLIENT_IP_HEADER` or `YOINK_TRUSTED_PROXY_HOPS`
 
-**Sizing**: each fetch is a short-lived yt-dlp process (~50–100 MB RAM, a few seconds). Each download adds ffmpeg (CPU) and passes the file through the server twice (bandwidth). A starting point for a 4 vCPU / 8 GB box is `YOINK_MAX_CONCURRENT_RESOLVES=10` and `YOINK_MAX_CONCURRENT_JOBS=6`. Measure with the load test and adjust.
+### Option 3: Manual/VPS
 
-`NEXT_PUBLIC_*` variables are inlined at build time, so pass them as build args or set them in the build environment as well.
-
-Job state, rate limits and the resolve cache are kept **in process memory**, so run a single instance (scale vertically with `YOINK_MAX_CONCURRENT_JOBS`). To scale horizontally, move `rate-limit.ts` and `jobs.ts` state to Redis and use shared storage for the temp files.
-
-See `.env.example` for all configuration options.
-
-## Load testing
-
-`scripts/load-test.mjs` simulates users doing paste → fetch (and optionally → download) against any deployment and prints latency percentiles, error breakdowns and live server queue depth from `/api/health`.
+Requires **Node 20+** (distro `nodejs` packages are often older — use NodeSource or nvm), ffmpeg and Python 3.10+.
 
 ```bash
-npm run loadtest -- --base http://localhost:3000 --users 50 --duration 60
-npm run loadtest -- --base https://staging.your.domain --users 20 --mode full --pick smallest
+# System dependencies
+sudo apt-get install -y ffmpeg python3 python3-venv
+
+# yt-dlp in a virtualenv
+python3 -m venv ~/yt-dlp-env
+~/yt-dlp-env/bin/pip install -U "yt-dlp[default,curl-cffi]"
+
+# Clone, configure, build
+git clone https://github.com/ashanviii/yoink.git
+cd yoink
+npm ci
+cp .env.example .env
+nano .env   # set YOINK_SECRET, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL,
+            # YTDLP_PATH=$HOME/yt-dlp-env/bin/yt-dlp, FFMPEG_PATH=/usr/bin/ffmpeg,
+            # YOINK_TRUSTED_PROXY_HOPS=1
+npm run build
+
+# Run (keep it alive with systemd or PM2)
+npm start
 ```
 
-- Every fetch hits the real platforms. Keep runs modest, because hammering YouTube/Instagram from one IP can get that IP blocked by them.
-- By default each virtual user sends its own `X-Forwarded-For` IP. If the target uses `YOINK_CLIENT_IP_HEADER`, pass the same header with `--ip-header`.
-- Run the server with `YOINK_RESOLVE_CACHE_TTL_MS=0` to measure uncached extraction (worst case). With the cache on, repeated links are near-instant.
-- The `rss` figure is the Node process only. yt-dlp/ffmpeg child processes use additional memory.
+Then put a reverse proxy (nginx/Caddy) in front for HTTPS. Don't expose port 3000 directly.
+
+> `NEXT_PUBLIC_*` variables are inlined at **build time** — after changing them, rebuild.
+
+---
+
+## ⚙️ Configuration
+
+### Essential Variables
+
+Create `.env` file (see `.env.example` for full list):
+
+```env
+# REQUIRED for production
+DOMAIN=yoink.example.com                           # Used by Caddy for HTTPS
+YOINK_SECRET=<generate with: openssl rand -base64 48>
+NEXT_PUBLIC_SITE_URL=https://yoink.example.com    # Public URL
+NEXT_PUBLIC_CONTACT_EMAIL=legal@yoink.example.com # For privacy page
+
+# Recommended: Tune these based on server resources
+YOINK_MAX_CONCURRENT_RESOLVES=6   # Parallel fetch operations
+YOINK_MAX_CONCURRENT_JOBS=3       # Parallel downloads
+```
+
+### Client IP Detection (Important!)
+
+For per-IP rate limiting to work, the server must know real client IPs:
+
+```env
+# Use ONE of these (depending on your setup):
+
+# Cloudflare
+YOINK_CLIENT_IP_HEADER=cf-connecting-ip
+
+# Behind a single proxy (nginx, Caddy, Fly.io, etc.)
+YOINK_TRUSTED_PROXY_HOPS=1
+
+# Without either, clients can spoof IPs and dodge per-IP limits
+```
+
+Docker Compose already sets this correctly: `YOINK_TRUSTED_PROXY_HOPS=1` (Caddy is the proxy).
+
+### Advanced Options
+
+See `.env.example` for:
+- File size/duration limits
+- Concurrent operation caps and queue sizes
+- Cache TTL (for viral links)
+- Timeout values
+- Proxy settings (for geo-blocked platforms)
+- Cookie files (for Instagram Stories that require login)
+
+---
+
+## 🏗️ Architecture
+
+```
+Browser ──POST /api/resolve {url}──▶ Validate + canonicalize URL
+         (with yt-dlp extraction)     Return quality options + signed tokens
+                                      
+        ──POST /api/jobs {token}───▶ Verify token → Queue download job
+                                      (concurrency-capped)
+                                      
+        ──GET  /api/jobs/:id───────▶ Poll job status
+        ──GET  /api/jobs/:id/file──▶ Download finished file
+```
+
+**Key security features:**
+- **Signed tokens:** Client can only download what the server offered
+- **URL whitelist:** Only known platforms accepted, URLs canonicalized
+- **No shell execution:** yt-dlp spawned with array args (no injection)
+- **Load caps:** Prevents resource exhaustion; overflows get `503 BUSY`
+- **Deduplication:** Identical URLs share one extraction; cached 5 minutes
+- **Rate limiting:** Per-IP token buckets (resolve 20/min, jobs 10/min)
+- **Thumbnail proxy:** Instagram/TikTok CDNs block hotlinking, so `/api/thumb` proxies images from an allowlist of CDN domains only
+
+**Storage:** All state (jobs, rate limits, cache) in process memory → **run a single instance**. To scale horizontally, move `src/lib/rate-limit.ts` and `src/lib/jobs.ts` to Redis.
+
+---
+
+## 📊 Load Testing
+
+Test your deployment before going live:
+
+```bash
+npm run loadtest -- --base https://your.domain --users 50 --duration 60
+```
+
+Options:
+- `--users 50` — Concurrent virtual users
+- `--duration 60` — Test duration in seconds
+- `--mode full` — Also download a file (default `resolve` = fetch only)
+- `--pick smallest|best` — Which option to download in full mode (default `smallest`)
+- `--ip-header H` — Header used to give each virtual user its own IP
 
 Reference results on a laptop (8 cores, home connection):
 
@@ -102,8 +225,147 @@ Reference results on a laptop (8 cores, home connection):
 | 30 users vs. caps of 2 running + 5 queued | 67% ok, rest got a clean `503 BUSY` with no runaway processes |
 | 150 users, one viral link, cache on | 2,113 requests in 21s, 100% ok, p50 15ms, one yt-dlp run total |
 
-## Known limitations
+**Tips:**
+- Real requests hit actual platforms — don't hammer them
+- If repeated links show <100ms, the cache is working ✓
+- Lots of `503 BUSY` → raise `YOINK_MAX_CONCURRENT_RESOLVES`/`YOINK_MAX_CONCURRENT_JOBS`
+- `UPSTREAM_BLOCKED` → Platform rate-limiting you (YouTube especially); add `YTDLP_PROXY`
 
-- **Instagram Stories**: Instagram requires a login for most stories. Without `YTDLP_COOKIES_FILE` these return a clear "login required" error. Supplying an account's cookies may breach Instagram's terms, so that decision is left to the operator.
-- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported. yoink is video/audio focused.
-- **Regional blocks**: if a platform is blocked where the server runs (e.g. TikTok in India), set `YTDLP_PROXY`.
+---
+
+## 🆓 Free Deployment (Oracle Cloud Always Free)
+
+**Steps:** 30–45 minutes first time.
+
+→ **See [DEPLOY.md](DEPLOY.md)** for step-by-step guide:
+1. Create Oracle Cloud free-tier account
+2. Spin up 4-CPU ARM server (24 GB RAM, free)
+3. Open ports 80/443
+4. Get free domain (DuckDNS)
+5. Clone repo, configure `.env`, `docker compose up`
+6. Done! Runs the full downloader with automatic HTTPS.
+
+**Daily operations:**
+```bash
+# Deploy new code
+git pull && docker compose up -d --build
+
+# Watch logs
+docker compose logs -f yoink
+
+# Check health
+curl -s https://YOUR_DOMAIN/api/health
+
+# Restart (also updates yt-dlp)
+docker compose restart yoink
+
+# Keep yt-dlp fresh (add to crontab)
+0 5 * * * cd ~/yoink && docker compose restart yoink
+```
+
+---
+
+## 🐛 Troubleshooting
+
+| Problem | Solution |
+| --- | --- |
+| **Certificate errors in `docker compose logs caddy`** | Check DNS points to server IP; verify ports 80/443 open in firewall (Oracle has 2: security list + iptables) |
+| **"set YOINK_SECRET in .env" error** | `.env` missing required variable; run `openssl rand -base64 48` and add it |
+| **YouTube says "temporarily blocking our requests"** | Datacenter IP hit rate limit. Wait it out, or set `YTDLP_PROXY` to residential proxy |
+| **Lots of "We're at capacity" (503 BUSY)** | Raise `YOINK_MAX_CONCURRENT_RESOLVES` / `YOINK_MAX_CONCURRENT_JOBS`, then `docker compose up -d` |
+| **Instagram Stories return "login required"** | Need `YTDLP_COOKIES_FILE` with logged-in cookies (may violate TOS — your choice) |
+| **TikTok blocked (e.g., India)** | Set `YTDLP_PROXY=socks5://...` to proxy requests |
+| **Server keeps getting reclaimed (Oracle)** | Oracle reclaims idle Always Free instances. Upgrading to Pay-As-You-Go (still free within limits) exempts it |
+
+---
+
+## 📈 Performance & Sizing
+
+**Resource usage per operation:**
+- Fetch: ~50–100 MB RAM, a few seconds (yt-dlp process)
+- Download: CPU-heavy (ffmpeg), bandwidth (file streamed through server)
+
+**Starting point for 4 vCPU / 8 GB:**
+```env
+YOINK_MAX_CONCURRENT_RESOLVES=10
+YOINK_MAX_CONCURRENT_JOBS=6
+```
+
+Monitor with load testing and adjust based on memory usage.
+
+---
+
+## 📝 API Endpoints
+
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| POST | `/api/resolve` | Extract video/audio info from URL, return download options with signed tokens |
+| POST | `/api/jobs` | Create download job with signed token |
+| GET | `/api/jobs/:id` | Poll job status (`downloading`, `processing`, `ready`) |
+| GET | `/api/jobs/:id/file` | Stream finished file (auto-deleted after `YOINK_FILE_TTL_MS`) |
+| GET | `/api/thumb` | Proxy image URLs (whitelisted CDNs only) |
+| GET | `/api/health` | Health check (returns queue depth, load info) |
+
+All requests are rate-limited per client IP.
+
+---
+
+## 🔒 Security & Compliance
+
+- **Public content only:** Private/DRM/live content returns clear error
+- **Rate limiting:** Per-IP caps prevent abuse
+- **Signed tokens:** Can't request arbitrary downloads
+- **URL validation:** Strict allowlist per platform
+- **Security headers:** CSP, `frame-ancestors 'none'`, nosniff, HSTS in production, same-origin checks on POST APIs
+- **Privacy:** See [Privacy Policy](src/app/privacy/page.tsx)
+- **DMCA/Copyright:** See [Copyright Policy](src/app/copyright/page.tsx)
+
+## ⚠️ Known Limitations
+
+- **Instagram Stories:** most need a login. Without `YTDLP_COOKIES_FILE` they return a clear "login required" error. Supplying an account's cookies may breach Instagram's terms — operator's call.
+- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; yoink is video/audio only.
+- **Regional blocks:** if a platform is blocked where the server runs (e.g. TikTok in India), set `YTDLP_PROXY`.
+- **Single instance only:** jobs, rate limits and cache live in memory. Scale vertically.
+- **Serverless won't work** (e.g. Vercel functions): needs a long-running Node server with yt-dlp, ffmpeg and local disk.
+
+---
+
+## 📚 Stack
+
+- **Next.js 16** (App Router) + React 19 + TypeScript
+- **Tailwind CSS v4** — Styling
+- **yt-dlp** — Video/audio extraction
+- **ffmpeg** — Stream merging & audio conversion
+- **Zod** — Input validation
+- **Vitest** — Unit tests
+
+---
+
+## 📄 License
+
+No license file is included yet — all rights reserved by default. Operators are responsible for complying with platform terms and copyright law.
+
+---
+
+## 🤝 Contributing
+
+1. Clone the repo
+2. Install dependencies: `npm install && pip install -U yt-dlp`
+3. Run tests: `npm test`
+4. Make changes
+5. Submit PR
+
+Keep yt-dlp up to date — platforms change frequently and yt-dlp ships fixes quickly.
+
+---
+
+## 📞 Support & Issues
+
+- Check [DEPLOY.md](DEPLOY.md) for deployment issues
+- Review [Troubleshooting](#-troubleshooting) above
+- Check existing GitHub issues
+- Load test to identify bottlenecks
+
+---
+
+**Made with ❤️ for the internet**
