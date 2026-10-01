@@ -1,0 +1,8 @@
+{$DOMAIN} {
+	# Compresses pages and JSON; videos/audio are already compressed and are skipped.
+	encode zstd gzip
+
+	# Caddy replaces any client-sent X-Forwarded-For with the real client IP,
+	# which is what YOINK_TRUSTED_PROXY_HOPS=1 expects.
+	reverse_proxy yoink:3000
+}

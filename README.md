@@ -58,7 +58,11 @@ Keep yt-dlp up to date (`pip install -U yt-dlp`). Platforms change their sites o
 
 ## Deployment
 
-yoink needs a long-running Node server with yt-dlp, ffmpeg and local disk. Serverless platforms (e.g. Vercel functions) won't work. Use the included `Dockerfile`:
+yoink needs a long-running Node server with yt-dlp, ffmpeg and local disk. Serverless platforms (e.g. Vercel functions) won't work.
+
+**Step-by-step free deployment (Oracle Cloud + Docker Compose + automatic HTTPS): see [DEPLOY.md](DEPLOY.md).** `docker-compose.yml` runs yoink behind Caddy, and the container updates yt-dlp on every start.
+
+Or run the image directly:
 
 ```bash
 docker build -t yoink .
