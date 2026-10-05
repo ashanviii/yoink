@@ -215,7 +215,7 @@ export function Downloader({ placeholder = "Paste a Reel, Short, TikTok or Pin l
             <p className="text-muted">
               {platform
                 ? `Works with any public ${PLATFORMS[platform].name} link.`
-                : "Instagram · YouTube · TikTok · Pinterest — public links only."}
+                : "Instagram · TikTok · Pinterest — public links only."}
             </p>
           )}
         </div>
