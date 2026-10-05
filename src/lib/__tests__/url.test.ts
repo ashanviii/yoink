@@ -13,21 +13,6 @@ function reason(input: string) {
 }
 
 describe("parseMediaUrl", () => {
-  it("canonicalises YouTube links and strips tracking", () => {
-    expect(ok("https://www.youtube.com/watch?v=jNQXAC9IVRw&list=PL123&si=abc").url).toBe(
-      "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-    );
-    expect(ok("youtu.be/jNQXAC9IVRw?si=xyz").url).toBe("https://www.youtube.com/watch?v=jNQXAC9IVRw");
-    expect(ok("https://m.youtube.com/watch?v=jNQXAC9IVRw").url).toBe("https://www.youtube.com/watch?v=jNQXAC9IVRw");
-    const short = ok("https://youtube.com/shorts/abcdefghijk?feature=share");
-    expect(short).toEqual({ platform: "youtube", kind: "short", url: "https://www.youtube.com/shorts/abcdefghijk" });
-  });
-
-  it("rejects YouTube links without a valid video id", () => {
-    expect(reason("https://www.youtube.com/@somechannel")).toBe("unsupported-content");
-    expect(reason("https://www.youtube.com/watch?v=short")).toBe("unsupported-content");
-  });
-
   it("handles Instagram reels, posts and stories", () => {
     expect(ok("https://www.instagram.com/reel/Chunk8-jurw/?igsh=MWQ1").url).toBe("https://www.instagram.com/reel/Chunk8-jurw/");
     expect(ok("https://instagram.com/reels/Chunk8-jurw").kind).toBe("reel");
@@ -60,21 +45,13 @@ describe("parseMediaUrl", () => {
     expect(ok("https://pin.it/4abcDEF").url).toBe("https://pin.it/4abcDEF");
   });
 
-  it("extracts a link from surrounding text", () => {
-    expect(ok("lmaooo look at this https://youtu.be/jNQXAC9IVRw!!").url).toBe("https://www.youtube.com/watch?v=jNQXAC9IVRw");
-  });
-
   it("rejects unsupported or dangerous input", () => {
     expect(reason("")).toBe("empty");
     expect(reason("   ")).toBe("empty");
     expect(reason("not a url")).toBe("invalid");
     expect(reason("javascript:alert(1)")).toBe("invalid");
     expect(reason("file:///etc/passwd")).toBe("invalid");
-    expect(reason("https://user:pass@www.youtube.com/watch?v=jNQXAC9IVRw")).toBe("invalid");
-    expect(reason("https://www.youtube.com:8080/watch?v=jNQXAC9IVRw")).toBe("invalid");
     expect(reason("https://example.com/video.mp4")).toBe("unsupported-site");
-    expect(reason("https://youtube.com.evil.com/watch?v=jNQXAC9IVRw")).toBe("unsupported-site");
-    expect(reason("https://notyoutube.com/watch?v=jNQXAC9IVRw")).toBe("unsupported-site");
-    expect(reason("http://127.0.0.1/watch?v=jNQXAC9IVRw")).toBe("unsupported-site");
+    expect(reason("http://127.0.0.1/video")).toBe("unsupported-site");
   });
 });

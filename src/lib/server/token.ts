@@ -12,7 +12,7 @@ const payloadSchema = z.object({
   /** canonical source URL */
   u: z.string().url(),
   /** platform id */
-  p: z.enum(["instagram", "youtube", "tiktok", "pinterest"]),
+  p: z.enum(["instagram", "tiktok", "pinterest"]),
   /** yt-dlp format selector */
   f: z.string().min(1).max(512),
   /** output mode */

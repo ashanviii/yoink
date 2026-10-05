@@ -1,6 +1,6 @@
 # yoink
 
-A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **YouTube** (videos, Shorts, MP3/M4A), **TikTok** (no watermark), and **Pinterest** videos.
+A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **TikTok** (no watermark), and **Pinterest** videos.
 
 **Flow:** Paste URL → fetch → pick quality/format → download.
 
@@ -8,7 +8,7 @@ A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, 
 
 ## 🎯 Features
 
-- **Multi-platform:** Instagram, YouTube (4K support), TikTok (watermark-free), Pinterest
+- **Multi-platform:** Instagram, TikTok (watermark-free), Pinterest
 - **Mobile-first UI:** Works great on phones; desktop too
 - **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
 - **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
@@ -229,7 +229,7 @@ Reference results on a laptop (8 cores, home connection):
 - Real requests hit actual platforms — don't hammer them
 - If repeated links show <100ms, the cache is working ✓
 - Lots of `503 BUSY` → raise `YOINK_MAX_CONCURRENT_RESOLVES`/`YOINK_MAX_CONCURRENT_JOBS`
-- `UPSTREAM_BLOCKED` → Platform rate-limiting you (YouTube especially); add `YTDLP_PROXY`
+- `UPSTREAM_BLOCKED` → Platform rate-limiting you; add `YTDLP_PROXY`
 
 ---
 
@@ -271,7 +271,6 @@ docker compose restart yoink
 | --- | --- |
 | **Certificate errors in `docker compose logs caddy`** | Check DNS points to server IP; verify ports 80/443 open in firewall (Oracle has 2: security list + iptables) |
 | **"set YOINK_SECRET in .env" error** | `.env` missing required variable; run `openssl rand -base64 48` and add it |
-| **YouTube says "temporarily blocking our requests"** | Datacenter IP hit rate limit. Wait it out, or set `YTDLP_PROXY` to residential proxy |
 | **Lots of "We're at capacity" (503 BUSY)** | Raise `YOINK_MAX_CONCURRENT_RESOLVES` / `YOINK_MAX_CONCURRENT_JOBS`, then `docker compose up -d` |
 | **Instagram Stories return "login required"** | Need `YTDLP_COOKIES_FILE` with logged-in cookies (may violate TOS — your choice) |
 | **TikTok blocked (e.g., India)** | Set `YTDLP_PROXY=socks5://...` to proxy requests |
@@ -323,7 +322,7 @@ All requests are rate-limited per client IP.
 ## ⚠️ Known Limitations
 
 - **Instagram Stories:** most need a login. Without `YTDLP_COOKIES_FILE` they return a clear "login required" error. Supplying an account's cookies may breach Instagram's terms — operator's call.
-- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; yoink is video/audio only.
+- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; yoink is video only.
 - **Regional blocks:** if a platform is blocked where the server runs (e.g. TikTok in India), set `YTDLP_PROXY`.
 - **Single instance only:** jobs, rate limits and cache live in memory. Scale vertically.
 - **Serverless won't work** (e.g. Vercel functions): needs a long-running Node server with yt-dlp, ffmpeg and local disk.

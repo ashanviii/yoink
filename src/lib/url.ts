@@ -13,7 +13,6 @@ export type UrlParseResult =
 
 const MAX_INPUT_LENGTH = 2048;
 const URL_IN_TEXT = /https?:\/\/[^\s<>"'`]+/i;
-const YT_ID = /^[A-Za-z0-9_-]{11}$/;
 const IG_CODE = /^[A-Za-z0-9_-]{5,64}$/;
 const NUMERIC_ID = /^\d{5,25}$/;
 const SHORT_CODE = /^[A-Za-z0-9_-]{4,32}$/;
@@ -59,29 +58,6 @@ export function extractUrl(input: string): URL | null {
 
 function segments(url: URL): string[] {
   return url.pathname.split("/").filter(Boolean);
-}
-
-function parseYouTube(url: URL): ParsedMediaUrl | null {
-  const host = url.hostname;
-  const parts = segments(url);
-  let id: string | null = null;
-  let kind: ContentKind = "video";
-
-  if (hostMatches(host, "youtu.be")) {
-    id = parts[0] ?? null;
-  } else if (parts[0] === "watch") {
-    id = url.searchParams.get("v");
-  } else if (parts[0] === "shorts") {
-    id = parts[1] ?? null;
-    kind = "short";
-  } else if (["embed", "v", "live", "e"].includes(parts[0] ?? "")) {
-    id = parts[1] ?? null;
-  }
-
-  if (!id || !YT_ID.test(id)) return null;
-  const canonical =
-    kind === "short" ? `https://www.youtube.com/shorts/${id}` : `https://www.youtube.com/watch?v=${id}`;
-  return { platform: "youtube", kind, url: canonical };
 }
 
 function parseInstagram(url: URL): ParsedMediaUrl | null {
@@ -154,7 +130,6 @@ function parsePinterest(url: URL): ParsedMediaUrl | null {
 }
 
 const PARSERS: Record<PlatformId, (url: URL) => ParsedMediaUrl | null> = {
-  youtube: parseYouTube,
   instagram: parseInstagram,
   tiktok: parseTikTok,
   pinterest: parsePinterest,
@@ -178,7 +153,7 @@ export function parseMediaUrl(input: string): UrlParseResult {
 export const URL_ERROR_MESSAGES: Record<Exclude<UrlParseResult, { ok: true }>["reason"], string> = {
   empty: "Paste a link first ✌️",
   invalid: "That doesn't look like a link. Double-check and try again.",
-  "unsupported-site": "We only support Instagram, YouTube, TikTok and Pinterest links (for now).",
+  "unsupported-site": "We only support Instagram, TikTok and Pinterest links.",
   "unsupported-content":
-    "We recognise the site, but not this kind of link. Try a direct link to a reel, post, story, video, short or pin.",
+    "We recognise the site, but not this kind of link. Try a direct link to a reel, post, story or pin.",
 };

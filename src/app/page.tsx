@@ -5,13 +5,13 @@ import { site } from "@/lib/site";
 import { faqSchema, howToSchema, webAppSchema, websiteSchema } from "@/lib/structured-data";
 
 const STEPS = [
-  "Copy the link to any public reel, story, video, Short, TikTok or pin.",
+  "Copy the link to any public reel, story, TikTok or pin.",
   "Paste it into yoink — we auto-detect the platform and fetch every quality option.",
   "Pick a resolution or MP3 and the file lands straight on your device.",
 ];
 
 const FEATURES = [
-  { title: "Max quality, always", body: "We list every resolution the platform has — up to 4K — and merge video with the best audio track." },
+  { title: "Max quality, always", body: "We list every resolution the platform has and merge video with the best audio track." },
   { title: "No watermarks", body: "TikTok's watermarked copy is filtered out. You get the clean stream, as uploaded." },
   { title: "MP3 in one tap", body: "Rip just the audio from any video as MP3, or grab the untouched original as M4A." },
   { title: "Private by default", body: "No accounts, no logins, no link history. Files auto-delete from our servers within minutes." },
@@ -19,7 +19,6 @@ const FEATURES = [
 
 const PLATFORM_LINKS: PlatformLink[] = [
   { href: "/instagram-reels-downloader", platform: "instagram", label: "Instagram", blurb: "Reels, Stories, video posts & carousels." },
-  { href: "/youtube-video-downloader", platform: "youtube", label: "YouTube", blurb: "Videos up to 4K, Shorts, and MP3." },
   { href: "/tiktok-downloader", platform: "tiktok", label: "TikTok", blurb: "Clean HD videos without the watermark." },
   { href: "/pinterest-video-downloader", platform: "pinterest", label: "Pinterest", blurb: "Video pins & Idea Pins in HD." },
 ];
@@ -36,10 +35,10 @@ export default function Home() {
         ]}
       />
       <Hero
-        eyebrow="Instagram · YouTube · TikTok · Pinterest"
+        eyebrow="Instagram · TikTok · Pinterest"
         title="Yoink any video in"
         highlight="max quality"
-        subtitle="Paste a link. Pick a quality. Done. Reels, Stories, Shorts, TikToks and Pins — no watermark, no app, no login."
+        subtitle="Paste a link. Pick a quality. Done. Reels, Stories, TikToks and Pins — no watermark, no app, no login."
       />
       <PlatformGrid links={PLATFORM_LINKS} />
       <Steps steps={STEPS} />

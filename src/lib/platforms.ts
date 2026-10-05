@@ -1,4 +1,4 @@
-export type PlatformId = "instagram" | "youtube" | "tiktok" | "pinterest";
+export type PlatformId = "instagram" | "tiktok" | "pinterest";
 
 export type ContentKind = "reel" | "post" | "story" | "video" | "short" | "pin";
 
@@ -19,13 +19,6 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     name: "Instagram",
     hosts: ["instagram.com", "instagr.am"],
     accent: "#ff3d8b",
-    watermarkFree: true,
-  },
-  youtube: {
-    id: "youtube",
-    name: "YouTube",
-    hosts: ["youtube.com", "youtu.be", "youtube-nocookie.com"],
-    accent: "#ff3b30",
     watermarkFree: true,
   },
   tiktok: {
