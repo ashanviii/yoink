@@ -1,14 +1,12 @@
-export type PlatformId = "instagram" | "tiktok" | "pinterest";
+export type PlatformId = "instagram" | "tiktok" | "pinterest" | "facebook" | "snapchat";
 
-export type ContentKind = "reel" | "post" | "story" | "video" | "short" | "pin";
+export type ContentKind = "reel" | "post" | "story" | "video" | "pin";
 
 export interface Platform {
   id: PlatformId;
   name: string;
   /** Hostnames (exact or as a parent domain) accepted for this platform. */
   hosts: readonly string[];
-  /** Brand-ish accent used for small UI touches (badges, focus rings). */
-  accent: string;
   /** Whether downloads are re-encoded/selected to avoid watermarks. */
   watermarkFree: boolean;
 }
@@ -18,14 +16,24 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     id: "instagram",
     name: "Instagram",
     hosts: ["instagram.com", "instagr.am"],
-    accent: "#ff3d8b",
     watermarkFree: true,
   },
   tiktok: {
     id: "tiktok",
     name: "TikTok",
     hosts: ["tiktok.com"],
-    accent: "#25f4ee",
+    watermarkFree: true,
+  },
+  facebook: {
+    id: "facebook",
+    name: "Facebook",
+    hosts: ["facebook.com", "fb.watch", "fb.com"],
+    watermarkFree: true,
+  },
+  snapchat: {
+    id: "snapchat",
+    name: "Snapchat",
+    hosts: ["snapchat.com"],
     watermarkFree: true,
   },
   pinterest: {
@@ -55,7 +63,6 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
       "pinterest.co.kr",
       "pinterest.in",
     ],
-    accent: "#e60023",
     watermarkFree: true,
   },
 };

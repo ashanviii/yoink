@@ -2,6 +2,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
+import { PLATFORMS, type PlatformId } from "@/lib/platforms";
 import { config } from "./config";
 
 /**
@@ -12,7 +13,7 @@ const payloadSchema = z.object({
   /** canonical source URL */
   u: z.string().url(),
   /** platform id */
-  p: z.enum(["instagram", "tiktok", "pinterest"]),
+  p: z.enum(Object.keys(PLATFORMS) as [PlatformId, ...PlatformId[]]),
   /** yt-dlp format selector */
   f: z.string().min(1).max(512),
   /** output mode */

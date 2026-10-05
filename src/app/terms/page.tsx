@@ -29,7 +29,7 @@ export default function TermsPage() {
       </ul>
       <h2>Platform terms</h2>
       <p>
-        Instagram, YouTube, TikTok and Pinterest each have their own terms of service, some of which restrict
+        Instagram, TikTok, Facebook, Snapchat and Pinterest each have their own terms of service, some of which restrict
         downloading. You are responsible for making sure your use complies with them. {site.name} is not affiliated with or
         endorsed by any of these platforms.
       </p>

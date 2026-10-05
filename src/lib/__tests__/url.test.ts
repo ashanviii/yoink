@@ -45,6 +45,35 @@ describe("parseMediaUrl", () => {
     expect(ok("https://pin.it/4abcDEF").url).toBe("https://pin.it/4abcDEF");
   });
 
+  it("handles Facebook reels, videos, posts and share links", () => {
+    expect(ok("https://www.facebook.com/reel/1195289147628387?mibextid=abc")).toEqual({
+      platform: "facebook",
+      kind: "reel",
+      url: "https://www.facebook.com/reel/1195289147628387",
+    });
+    expect(ok("https://m.facebook.com/watch/?v=647537299265662&ref=sharing").url).toBe("https://www.facebook.com/watch/?v=647537299265662");
+    expect(ok("https://www.facebook.com/video.php?v=637842556329505").url).toBe("https://www.facebook.com/watch/?v=637842556329505");
+    expect(ok("https://www.facebook.com/NASA/videos/some-title/10153231379946729/").url).toBe(
+      "https://www.facebook.com/watch/?v=10153231379946729",
+    );
+    expect(ok("https://www.facebook.com/nasa/posts/pfbid02abcDEF123ghiJKL").kind).toBe("post");
+    expect(ok("https://fb.watch/aBcD12_x/").url).toBe("https://fb.watch/aBcD12_x/");
+    expect(ok("https://www.facebook.com/share/r/1ABcdEFgh2/").kind).toBe("reel");
+    expect(reason("https://www.facebook.com/NASA")).toBe("unsupported-content");
+    expect(reason("https://www.facebook.com/reel/notanumber")).toBe("unsupported-content");
+  });
+
+  it("handles Snapchat Spotlight links", () => {
+    const id = "W7_EDlXWTBiXAEEniNoMPwAAYYWtidGhudGZpAX1TKn0JAX1TKnXJAAAAAA";
+    expect(ok(`https://www.snapchat.com/spotlight/${id}?share_id=x`)).toEqual({
+      platform: "snapchat",
+      kind: "video",
+      url: `https://www.snapchat.com/spotlight/${id}`,
+    });
+    expect(ok(`https://www.snapchat.com/@creator/spotlight/${id}`).url).toBe(`https://www.snapchat.com/spotlight/${id}`);
+    expect(reason("https://www.snapchat.com/add/someone")).toBe("unsupported-content");
+  });
+
   it("rejects unsupported or dangerous input", () => {
     expect(reason("")).toBe("empty");
     expect(reason("   ")).toBe("empty");
@@ -52,6 +81,9 @@ describe("parseMediaUrl", () => {
     expect(reason("javascript:alert(1)")).toBe("invalid");
     expect(reason("file:///etc/passwd")).toBe("invalid");
     expect(reason("https://example.com/video.mp4")).toBe("unsupported-site");
+    expect(reason("https://facebook.com.evil.com/reel/1195289147628387")).toBe("unsupported-site");
+    expect(reason("https://notfacebook.com/reel/1195289147628387")).toBe("unsupported-site");
+    expect(reason("https://www.youtube.com/watch?v=jNQXAC9IVRw")).toBe("unsupported-site");
     expect(reason("http://127.0.0.1/video")).toBe("unsupported-site");
   });
 });

@@ -18,7 +18,7 @@ export default function manifest(): ManifestWithShareTarget {
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/apple-icon", sizes: "180x180", type: "image/png" },
     ],
-    // Lets Android users "Share → yoink" straight from Instagram/TikTok/YouTube.
+    // Lets Android users "Share → yoink" straight from Instagram/TikTok/Facebook.
     share_target: {
       action: "/",
       method: "GET",

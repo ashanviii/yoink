@@ -4,6 +4,11 @@ import type { ContentKind, PlatformId } from "./platforms";
 
 export type OptionKind = "video" | "audio";
 
+export interface TrimParams {
+  start: number; // seconds
+  end: number;   // seconds
+}
+
 export interface MediaOption {
   /** Signed token the client sends back to start this download. */
   token: string;
@@ -20,11 +25,17 @@ export interface MediaOption {
   best: boolean;
 }
 
+/** Frames in the trim filmstrip sprite (one horizontal row). */
+export const PREVIEW_FRAMES = 16;
+export const PREVIEW_FRAME_WIDTH = 120;
+
 export interface MediaItem {
   id: string;
   title: string;
   /** Same-origin proxied thumbnail URL, or null. */
   thumbnail: string | null;
+  /** Id for GET /api/preview/:id (filmstrip sprite), or null when no preview source exists. */
+  previewId: string | null;
   durationSec: number | null;
   width: number | null;
   height: number | null;

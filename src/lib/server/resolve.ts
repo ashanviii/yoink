@@ -3,6 +3,7 @@ import { AppError } from "@/lib/errors";
 import type { MediaItem, MediaOption, ResolveResponse } from "@/lib/media-types";
 import type { ParsedMediaUrl } from "@/lib/url";
 import { config } from "./config";
+import { registerPreviewSource } from "./preview";
 import { createDownloadToken } from "./token";
 import { classifyFailure, ytdlp } from "./ytdlp";
 import { Semaphore } from "./semaphore";
@@ -24,11 +25,18 @@ interface RawFormat {
   format_note?: string | null;
   protocol?: string | null;
   has_drm?: boolean | null;
+  url?: string | null;
+  http_headers?: Record<string, string> | null;
 }
 
 interface RawInfo {
   _type?: "video" | "playlist" | "url";
   id: string;
+  url?: string | null;
+  ext?: string | null;
+  vcodec?: string | null;
+  acodec?: string | null;
+  http_headers?: Record<string, string> | null;
   title?: string | null;
   description?: string | null;
   uploader?: string | null;
@@ -47,6 +55,27 @@ const MAX_VIDEO_OPTIONS = 6;
 const MAX_CAROUSEL_ITEMS = 20;
 
 const isSet = (codec: string | null | undefined): codec is string => !!codec && codec !== "none";
+
+/**
+ * Some extractors (e.g. Snapchat Spotlight) return one direct file with no `formats`
+ * list and blank codec info; treat it as a single format of unknown codecs.
+ */
+function formatsOf(info: RawInfo): RawFormat[] {
+  if (info.formats?.length) return info.formats;
+  if (!info.url) return [];
+  return [
+    {
+      format_id: "0",
+      ext: info.ext ?? undefined,
+      vcodec: info.vcodec ?? "unknown",
+      acodec: info.acodec ?? "unknown",
+      width: info.width || null,
+      height: info.height || null,
+      url: info.url,
+      http_headers: info.http_headers,
+    },
+  ];
+}
 
 function usable(format: RawFormat): boolean {
   if (format.has_drm) return false;
@@ -81,6 +110,12 @@ function formatSize(format: RawFormat, duration: number | null): { bytes: number
   return { bytes: null, estimate: true };
 }
 
+/** Facebook prefixes titles with engagement counts: "9.8K views · 341 reactions | Actual title". */
+function cleanTitle(title: string | null | undefined): string | null {
+  const cleaned = title?.replace(/^[\d.,]+[KMB]?\s+(views?|reactions?|plays?)\b[^|]*\|\s*/i, "").trim();
+  return cleaned || null;
+}
+
 function slugify(text: string): string {
   return (
     text
@@ -99,9 +134,9 @@ interface BuildContext {
 }
 
 function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
-  const formats = (info.formats ?? []).filter(usable);
+  const formats = formatsOf(info).filter(usable);
   const duration = info.duration ?? null;
-  const fileStem = `${slugify(info.title ?? ctx.parsed.platform)}-${info.id}`.slice(0, 110);
+  const fileStem = `${slugify(cleanTitle(info.title) ?? ctx.parsed.platform)}-${info.id}`.slice(0, 110);
 
   const token = (selector: string, mode: "video" | "audio-mp3" | "audio-m4a", label: string) =>
     createDownloadToken({
@@ -238,17 +273,28 @@ function assertDownloadable(info: RawInfo): void {
   }
 }
 
+/** Smallest stream that still makes a legible filmstrip (≥240p when available). */
+function previewSource(info: RawInfo): string | null {
+  if (!info.duration) return null;
+  const candidates = formatsOf(info)
+    .filter((f) => usable(f) && isSet(f.vcodec) && f.url)
+    .sort((a, b) => (a.height ?? 9999) - (b.height ?? 9999));
+  const pick = candidates.find((f) => (f.height ?? 0) >= 240) ?? candidates[0];
+  return pick ? registerPreviewSource(pick.url!, pick.http_headers ?? undefined, info.duration) : null;
+}
+
 function toItem(info: RawInfo, ctx: BuildContext): MediaItem | null {
   assertDownloadable(info);
   const options = buildOptions(info, ctx);
   if (options.length === 0) return null;
   return {
     id: info.id,
-    title: info.title?.trim() || "Untitled",
+    title: cleanTitle(info.title) ?? "Untitled",
     thumbnail: thumbnailProxyUrl(info.thumbnail),
+    previewId: previewSource(info),
     durationSec: info.duration ?? null,
-    width: info.width ?? null,
-    height: info.height ?? null,
+    width: info.width || null,
+    height: info.height || null,
     options,
   };
 }
@@ -329,7 +375,7 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
     platform: parsed.platform,
     kind: parsed.kind,
     sourceUrl: parsed.url,
-    title: info.title?.trim() || items[0].title,
+    title: cleanTitle(info.title) ?? items[0].title,
     uploader: info.uploader ?? info.channel ?? null,
     items,
   };

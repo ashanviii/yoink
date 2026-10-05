@@ -1,8 +1,8 @@
 export const site = {
   name: "yoink",
-  tagline: "Save reels, shorts & vids in max quality",
+  tagline: "Save reels, snaps & vids in max quality",
   description:
-    "yoink is a free, fast media downloader for Instagram Reels & Stories, YouTube videos & MP3, TikTok (no watermark) and Pinterest videos. Paste a link, pick a quality, done.",
+    "yoink is a free, fast video downloader for Instagram Reels & Stories, TikTok (no watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest. Paste a link, trim if you like, download.",
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
   contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "legal@example.com",
 } as const;

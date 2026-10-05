@@ -129,10 +129,55 @@ function parsePinterest(url: URL): ParsedMediaUrl | null {
   return null;
 }
 
+const FB_POST_ID = /^(pfbid[A-Za-z0-9]{10,80}|\d{5,25})$/;
+
+function parseFacebook(url: URL): ParsedMediaUrl | null {
+  const parts = segments(url);
+  const fb = (kind: ContentKind, canonical: string): ParsedMediaUrl => ({ platform: "facebook", kind, url: canonical });
+
+  // Short/share links redirect to the real video; the extractor follows them.
+  if (hostMatches(url.hostname, "fb.watch")) {
+    return parts[0] && SHORT_CODE.test(parts[0]) ? fb("video", `https://fb.watch/${parts[0]}/`) : null;
+  }
+  if (parts[0] === "share" && (parts[1] === "v" || parts[1] === "r") && parts[2] && SHORT_CODE.test(parts[2])) {
+    return fb(parts[1] === "r" ? "reel" : "video", `https://www.facebook.com/share/${parts[1]}/${parts[2]}/`);
+  }
+  if (parts[0] === "reel" && parts[1] && NUMERIC_ID.test(parts[1])) {
+    return fb("reel", `https://www.facebook.com/reel/${parts[1]}`);
+  }
+  if (parts[0] === "watch" || parts[0] === "video.php" || (parts[0] === "video" && parts[1] === "video.php")) {
+    const id = url.searchParams.get("v") ?? url.searchParams.get("video_id");
+    return id && NUMERIC_ID.test(id) ? fb("video", `https://www.facebook.com/watch/?v=${id}`) : null;
+  }
+  // /<page>/videos/<id> and /<page>/videos/<slug>/<id>
+  const videos = parts.indexOf("videos");
+  if (videos >= 1) {
+    const id = parts.slice(videos + 1).find((p) => NUMERIC_ID.test(p));
+    return id ? fb("video", `https://www.facebook.com/watch/?v=${id}`) : null;
+  }
+  if (parts.length >= 3 && parts[1] === "posts" && FB_POST_ID.test(parts[2]) && /^[A-Za-z0-9.]{1,80}$/.test(parts[0])) {
+    return fb("post", `https://www.facebook.com/${parts[0]}/posts/${parts[2]}`);
+  }
+  return null;
+}
+
+function parseSnapchat(url: URL): ParsedMediaUrl | null {
+  const parts = segments(url);
+  // /spotlight/<id> and /@user/spotlight/<id>
+  const idx = parts.indexOf("spotlight");
+  const id = idx >= 0 ? parts[idx + 1] : undefined;
+  if (id && /^[A-Za-z0-9_]{10,120}$/.test(id) && (idx === 0 || (idx === 1 && parts[0].startsWith("@")))) {
+    return { platform: "snapchat", kind: "video", url: `https://www.snapchat.com/spotlight/${id}` };
+  }
+  return null;
+}
+
 const PARSERS: Record<PlatformId, (url: URL) => ParsedMediaUrl | null> = {
   instagram: parseInstagram,
   tiktok: parseTikTok,
   pinterest: parsePinterest,
+  facebook: parseFacebook,
+  snapchat: parseSnapchat,
 };
 
 export function parseMediaUrl(input: string): UrlParseResult {
@@ -153,7 +198,7 @@ export function parseMediaUrl(input: string): UrlParseResult {
 export const URL_ERROR_MESSAGES: Record<Exclude<UrlParseResult, { ok: true }>["reason"], string> = {
   empty: "Paste a link first ✌️",
   invalid: "That doesn't look like a link. Double-check and try again.",
-  "unsupported-site": "We only support Instagram, TikTok and Pinterest links.",
+  "unsupported-site": "We support Instagram, TikTok, Facebook, Snapchat and Pinterest links.",
   "unsupported-content":
-    "We recognise the site, but not this kind of link. Try a direct link to a reel, post, story or pin.",
+    "We recognise the site, but not this kind of link. Try a direct link to a reel, video, post, story, Spotlight or pin.",
 };

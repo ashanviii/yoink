@@ -28,7 +28,7 @@ export default function PrivacyPage() {
       </ul>
       <h2>What we don&apos;t do</h2>
       <ul>
-        <li>No accounts and no social media logins — we never ask for your Instagram, YouTube, TikTok or Pinterest credentials.</li>
+        <li>No accounts and no social media logins — we never ask for your Instagram, TikTok, Facebook, Snapchat or Pinterest credentials.</li>
         <li>No advertising or cross-site tracking cookies.</li>
         <li>No selling or sharing of your data.</li>
       </ul>

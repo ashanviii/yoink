@@ -25,7 +25,7 @@ function triggerSave(url: string, fileName: string | null) {
   anchor.remove();
 }
 
-export function useDownloadJob(token: string) {
+export function useDownloadJob(token: string, trim?: { start: number; end: number }) {
   const [state, setState] = useState<DownloadState>({ phase: "idle", job: null, error: null, fileUrl: null });
   const abortRef = useRef<AbortController | null>(null);
 
@@ -38,7 +38,7 @@ export function useDownloadJob(token: string) {
     setState({ phase: "starting", job: null, error: null, fileUrl: null });
 
     try {
-      let job = await startJob(token);
+      let job = await startJob(token, trim);
       setState((s) => ({ ...s, phase: "working", job }));
 
       while (job.status !== "ready" && job.status !== "error") {
@@ -61,7 +61,7 @@ export function useDownloadJob(token: string) {
       const message = err instanceof ApiError ? err.message : "Download failed. Try again.";
       setState({ phase: "error", job: null, error: message, fileUrl: null });
     }
-  }, [token]);
+  }, [token, trim]);
 
   const saveAgain = useCallback(() => {
     if (state.fileUrl) triggerSave(state.fileUrl, state.job?.fileName ?? null);

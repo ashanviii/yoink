@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBytes } from "@/lib/format";
-import type { MediaOption } from "@/lib/media-types";
+import type { MediaOption, TrimParams } from "@/lib/media-types";
 import { AlertIcon, CheckIcon, DownloadIcon, RetryIcon } from "./icons";
 import { useDownloadJob } from "./useDownloadJob";
 
@@ -11,8 +11,8 @@ const STAGE_LABEL: Record<string, string> = {
   processing: "Stitching it together…",
 };
 
-export function OptionRow({ option }: { option: MediaOption }) {
-  const { state, start, saveAgain } = useDownloadJob(option.token);
+export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimParams }) {
+  const { state, start, saveAgain } = useDownloadJob(option.token, trim);
   const busy = state.phase === "starting" || state.phase === "working";
   const progress = state.job?.progress ?? 0;
   const size = formatBytes(state.job?.sizeBytes ?? option.sizeBytes, state.job?.sizeBytes ? false : option.sizeIsEstimate);

@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "yoink — save reels, shorts & vids in max quality";
+export const alt = "yoink — save reels, snaps & vids in max quality";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const PILLS = ["Instagram", "YouTube", "TikTok", "Pinterest"];
+const PILLS = ["Instagram", "TikTok", "Facebook", "Snapchat", "Pinterest"];
 
 export default function OpengraphImage() {
   return new ImageResponse(

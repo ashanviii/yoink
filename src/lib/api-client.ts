@@ -35,8 +35,8 @@ export function resolveMedia(url: string, signal?: AbortSignal): Promise<Resolve
   return request("/api/resolve", { method: "POST", body: JSON.stringify({ url }), signal });
 }
 
-export function startJob(token: string): Promise<JobState> {
-  return request("/api/jobs", { method: "POST", body: JSON.stringify({ token }) });
+export function startJob(token: string, trim?: { start: number; end: number }): Promise<JobState> {
+  return request("/api/jobs", { method: "POST", body: JSON.stringify({ token, trim }) });
 }
 
 export function getJob(id: string, signal?: AbortSignal): Promise<JobState> {

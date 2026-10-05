@@ -5,6 +5,8 @@ import { ThemeToggle } from "./ThemeToggle";
 const NAV = [
   { href: "/instagram-reels-downloader", label: "Instagram" },
   { href: "/tiktok-downloader", label: "TikTok" },
+  { href: "/facebook-video-downloader", label: "Facebook" },
+  { href: "/snapchat-spotlight-downloader", label: "Snapchat" },
   { href: "/pinterest-video-downloader", label: "Pinterest" },
 ];
 

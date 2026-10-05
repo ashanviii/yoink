@@ -1,14 +1,15 @@
 # yoink
 
-A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **TikTok** (no watermark), and **Pinterest** videos.
+A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **TikTok** (no watermark), **Facebook** (videos, Reels), **Snapchat** (Spotlight) and **Pinterest** videos.
 
-**Flow:** Paste URL → fetch → pick quality/format → download.
+**Flow:** Paste URL → fetch → optionally trim (filmstrip editor) → pick quality/format → download.
 
 ---
 
 ## 🎯 Features
 
-- **Multi-platform:** Instagram, TikTok (watermark-free), Pinterest
+- **Multi-platform:** Instagram, TikTok (watermark-free), Facebook, Snapchat Spotlight, Pinterest
+- **Trim before download:** drag handles on a filmstrip of the video; only the kept range is re-encoded (frame-accurate)
 - **Mobile-first UI:** Works great on phones; desktop too
 - **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
 - **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
@@ -299,10 +300,11 @@ Monitor with load testing and adjust based on memory usage.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/resolve` | Extract video/audio info from URL, return download options with signed tokens |
-| POST | `/api/jobs` | Create download job with signed token |
+| POST | `/api/jobs` | Create download job with signed token (optional `trim: {start, end}` in seconds) |
 | GET | `/api/jobs/:id` | Poll job status (`downloading`, `processing`, `ready`) |
 | GET | `/api/jobs/:id/file` | Stream finished file (auto-deleted after `YOINK_FILE_TTL_MS`) |
 | GET | `/api/thumb` | Proxy image URLs (whitelisted CDNs only) |
+| GET | `/api/preview/:id` | Filmstrip sprite (16 frames) for the trim editor; id comes from `/api/resolve` |
 | GET | `/api/health` | Health check (returns queue depth, load info) |
 
 All requests are rate-limited per client IP.

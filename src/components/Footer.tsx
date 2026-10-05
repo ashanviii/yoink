@@ -35,7 +35,7 @@ export function Footer() {
         </nav>
       </div>
       <p className="mx-auto max-w-5xl px-4 pb-10 text-xs text-muted">
-        yoink is not affiliated with Instagram, Meta, YouTube, Google, TikTok, ByteDance or Pinterest. All trademarks belong
+        yoink is not affiliated with Instagram, Facebook, Meta, TikTok, ByteDance, Snapchat, Snap Inc. or Pinterest. All trademarks belong
         to their owners.
       </p>
     </footer>

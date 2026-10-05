@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Faq } from "@/lib/landing-pages";
-import { PLATFORMS, type PlatformId } from "@/lib/platforms";
-import { ArrowIcon, PLATFORM_ICONS } from "./icons";
+import type { PlatformId } from "@/lib/platforms";
+import { ArrowIcon, PlatformIcon } from "./icons";
 
 export function SectionHeading({ eyebrow, title, id }: { eyebrow: string; title: string; id?: string }) {
   return (
@@ -86,19 +86,19 @@ export function PlatformGrid({ links, title = "Pick your platform" }: { links: P
   return (
     <section aria-labelledby="platforms-heading" className="mx-auto max-w-5xl px-4 pt-20">
       <SectionHeading eyebrow="Supported" title={title} id="platforms-heading" />
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         {links.map((link) => {
-          const Icon = PLATFORM_ICONS[link.platform];
-          const accent = PLATFORMS[link.platform].accent;
           return (
             <li key={link.href}>
               <Link
                 href={link.href}
                 className="group flex h-full flex-col gap-3 rounded-3xl border border-border bg-surface p-5 transition hover:-translate-y-1 hover:border-text hover:shadow-card"
               >
-                <span className="grid size-11 place-items-center rounded-2xl text-white transition-transform group-hover:rotate-6" style={{ background: accent }}>
-                  <Icon size={22} />
-                </span>
+                <PlatformIcon
+                  platform={link.platform}
+                  size={44}
+                  className="size-11 rounded-2xl transition-transform group-hover:rotate-6"
+                />
                 <span className="font-display text-lg font-bold">{link.label}</span>
                 <span className="flex-1 text-sm text-muted">{link.blurb}</span>
                 <span className="flex items-center gap-1 text-sm font-semibold">

@@ -5,7 +5,7 @@ import { ApiError, resolveMedia } from "@/lib/api-client";
 import type { ResolveResponse } from "@/lib/media-types";
 import { PLATFORMS, type PlatformId } from "@/lib/platforms";
 import { URL_ERROR_MESSAGES, parseMediaUrl } from "@/lib/url";
-import { AlertIcon, ArrowIcon, ClipboardIcon, PLATFORM_ICONS, XIcon } from "./icons";
+import { AlertIcon, ArrowIcon, ClipboardIcon, PlatformIcon, XIcon } from "./icons";
 import { ResultCard } from "./ResultCard";
 
 type Status = "idle" | "loading" | "done" | "error";
@@ -18,7 +18,7 @@ interface Props {
   platform?: PlatformId;
 }
 
-export function Downloader({ placeholder = "Paste a Reel, Short, TikTok or Pin link…", platform }: Props) {
+export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap or Pin link…", platform }: Props) {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [result, setResult] = useState<ResolveResponse | null>(null);
@@ -35,7 +35,6 @@ export function Downloader({ placeholder = "Paste a Reel, Short, TikTok or Pin l
 
   const parsed = useMemo(() => (input.trim() ? parseMediaUrl(input) : null), [input]);
   const detected = parsed?.ok ? PLATFORMS[parsed.value.platform] : null;
-  const DetectedIcon = detected ? PLATFORM_ICONS[detected.id] : null;
 
   const fail = useCallback((message: string) => {
     setStatus("error");
@@ -130,12 +129,12 @@ export function Downloader({ placeholder = "Paste a Reel, Short, TikTok or Pin l
             status === "error" ? "animate-shake border-danger" : "border-border"
           }`}
         >
-          <div
-            className="grid size-11 shrink-0 place-items-center rounded-2xl transition-colors"
-            style={{ background: detected ? detected.accent : "var(--surface-2)", color: detected ? "#fff" : "var(--muted)" }}
-            aria-hidden
-          >
-            {DetectedIcon ? <DetectedIcon size={20} /> : <span className="text-lg">🔗</span>}
+          <div className="size-11 shrink-0 overflow-hidden rounded-2xl" aria-hidden>
+            {detected ? (
+              <PlatformIcon platform={detected.id} size={44} className="size-full" />
+            ) : (
+              <div className="grid size-full place-items-center bg-surface-2 text-lg text-muted">🔗</div>
+            )}
           </div>
           <label htmlFor="media-url" className="sr-only">
             Media link
@@ -215,7 +214,7 @@ export function Downloader({ placeholder = "Paste a Reel, Short, TikTok or Pin l
             <p className="text-muted">
               {platform
                 ? `Works with any public ${PLATFORMS[platform].name} link.`
-                : "Instagram · TikTok · Pinterest — public links only."}
+                : "Instagram · TikTok · Facebook · Snapchat · Pinterest — public links only."}
             </p>
           )}
         </div>

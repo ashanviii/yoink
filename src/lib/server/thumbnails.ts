@@ -6,9 +6,7 @@ import "server-only";
  * ever fetches from these CDN domains (no SSRF into anything else).
  */
 const ALLOWED_THUMB_HOSTS = [
-  "ytimg.com",
-  "ggpht.com",
-  "googleusercontent.com",
+  "sc-cdn.net",
   "cdninstagram.com",
   "fbcdn.net",
   "pinimg.com",

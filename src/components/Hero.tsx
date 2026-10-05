@@ -12,7 +12,7 @@ interface Props {
 
 const STICKERS = [
   { text: "no watermark ✦", className: "left-[4%] top-10 bg-hot text-white", r: "-8deg" },
-  { text: "up to 4K", className: "right-[6%] top-4 bg-pop text-white", r: "7deg" },
+  { text: "trim before you save", className: "right-[6%] top-4 bg-pop text-white", r: "7deg" },
   { text: "free & no login", className: "right-[2%] bottom-24 bg-accent text-accent-ink", r: "-5deg" },
 ];
 

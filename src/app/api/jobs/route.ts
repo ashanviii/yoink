@@ -8,7 +8,13 @@ import { verifyDownloadToken } from "@/lib/server/token";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const bodySchema = z.object({ token: z.string().max(4096) });
+const bodySchema = z.object({
+  token: z.string().max(4096),
+  trim: z
+    .object({ start: z.number().finite().min(0).max(86_400), end: z.number().finite().min(0).max(86_400) })
+    .refine((t) => t.end - t.start >= 0.5, "Trimmed clip must be at least half a second.")
+    .optional(),
+});
 
 /** Starts preparing a download. Poll GET /api/jobs/:id, then fetch /api/jobs/:id/file. */
 export async function POST(request: Request) {
@@ -21,7 +27,7 @@ export async function POST(request: Request) {
     if (!body.success) throw new AppError("BAD_REQUEST");
 
     const payload = verifyDownloadToken(body.data.token);
-    const job = createJob(payload, key);
+    const job = createJob(payload, key, body.data.trim);
     return Response.json(toJobState(job), { status: 202, headers: noStore });
   } catch (err) {
     return errorResponse(err);

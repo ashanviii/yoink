@@ -151,6 +151,68 @@ export const LANDING_PAGES: LandingPage[] = [
     ],
   },
   {
+    slug: "facebook-video-downloader",
+    platform: "facebook",
+    title: "Facebook Video & Reels Downloader — HD MP4 | yoink",
+    description:
+      "Download public Facebook videos and Reels in HD MP4, or save the audio as MP3. Paste the link, pick a quality, download. Free, no login.",
+    keywords: ["facebook video downloader", "facebook reels downloader", "download facebook video", "fb video download", "fb.watch downloader"],
+    h1: "Save Facebook videos",
+    highlight: "in HD",
+    subtitle: "Reels, Watch videos and page posts — paste the link and grab the best quality Facebook serves.",
+    placeholder: "https://www.facebook.com/reel/…",
+    navLabel: "Facebook",
+    steps: [
+      "On the video, tap Share → Copy link (fb.watch and share links work too).",
+      "Paste it into yoink and hit Fetch.",
+      "Pick HD or SD — or just the audio as MP3 — and download.",
+    ],
+    features: [
+      { title: "Reels & Watch", body: "Facebook Reels, Watch videos and videos on public pages are all supported." },
+      { title: "HD when available", body: "We list every resolution Facebook offers and merge the best audio in." },
+      { title: "Share links OK", body: "fb.watch and facebook.com/share links are followed to the original video." },
+      { title: "No login", body: "We never ask for your Facebook account. Public videos only." },
+    ],
+    faqs: [
+      { q: "Can I download private Facebook videos?", a: "No. yoink only works with videos anyone can watch without logging in — not private profiles or closed groups." },
+      { q: "Do Facebook Reels download without a watermark?", a: "Facebook doesn't burn a watermark into Reels files, and yoink doesn't add one." },
+      { q: "Why does a video say it needs a login?", a: "Some Facebook videos are only visible to signed-in users or friends. yoink can't fetch those." },
+      { q: "Do fb.watch links work?", a: "Yes — paste them as-is and yoink follows them to the full video." },
+      { q: "Can I save just the audio?", a: "Yes, choose MP3 or M4A in the Audio tab." },
+    ],
+  },
+  {
+    slug: "snapchat-spotlight-downloader",
+    platform: "snapchat",
+    title: "Snapchat Spotlight Downloader — Save Snaps as MP4 | yoink",
+    description:
+      "Download public Snapchat Spotlight videos as MP4 in their original quality. Paste the Spotlight link and save it — free, no app, no login.",
+    keywords: ["snapchat spotlight downloader", "download snapchat video", "save snapchat spotlight", "snapchat to mp4"],
+    h1: "Snapchat Spotlight,",
+    highlight: "saved",
+    subtitle: "Paste a public Spotlight link and keep the video in its original vertical quality.",
+    placeholder: "https://www.snapchat.com/spotlight/…",
+    navLabel: "Snapchat",
+    steps: [
+      "Open the Spotlight snap, tap Share → Copy link.",
+      "Paste it into yoink and tap Fetch.",
+      "Download the MP4, or just the sound as MP3.",
+    ],
+    features: [
+      { title: "Original quality", body: "Spotlight videos are saved exactly as Snapchat serves them." },
+      { title: "Vertical & ready", body: "Native 9:16 video that plays anywhere — no app needed." },
+      { title: "Sound as MP3", body: "Save the audio from any Spotlight snap." },
+      { title: "Anonymous", body: "We never use your Snapchat account, and nobody is notified." },
+    ],
+    faqs: [
+      { q: "Which Snapchat links work?", a: "Public Spotlight links (snapchat.com/spotlight/… or snapchat.com/@user/spotlight/…)." },
+      { q: "Can I download private snaps or friends' stories?", a: "No. Private snaps and friends-only stories can't be accessed, and yoink never asks for your login." },
+      { q: "Does the creator get notified?", a: "No. yoink fetches public Spotlight videos from our server, not your account." },
+      { q: "What quality are Spotlight downloads?", a: "The best quality Snapchat makes available, usually 720p or 1080p vertical." },
+      { q: "Can I repost downloaded snaps?", a: "Only with the creator's permission. Download for personal use and credit creators." },
+    ],
+  },
+  {
     slug: "pinterest-video-downloader",
     platform: "pinterest",
     title: "Pinterest Video Downloader — HD MP4 | yoink",
@@ -189,9 +251,9 @@ export function getLandingPage(slug: string): LandingPage | undefined {
 
 export const HOME_FAQS: Faq[] = [
   { q: "Is yoink free?", a: "Yes. yoink is free to use with a fair-use rate limit to keep things fast for everyone." },
-  { q: "Which sites does yoink support?", a: "Instagram (Reels, Stories, video posts & carousels), TikTok (without watermark) and Pinterest videos." },
+  { q: "Which sites does yoink support?", a: "Instagram (Reels, Stories, video posts & carousels), TikTok (without watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest videos." },
   { q: "Do I need to install an app or sign in?", a: "No. yoink runs in your browser on any phone, tablet or computer, and never asks for your social media logins." },
-  { q: "What quality will I get?", a: "The highest quality the platform makes available — up to 4K on YouTube — and you can always pick a smaller file instead." },
+  { q: "What quality will I get?", a: "The highest quality the platform makes available, and you can always pick a smaller file instead." },
   { q: "Do you keep copies of my downloads?", a: "No. Files are prepared temporarily for your download and automatically deleted within minutes. We don't keep a history of links." },
   { q: "Can I download private content?", a: "No. yoink only works with publicly accessible posts. Please respect creators and only download content you have the right to use." },
 ];

@@ -1,20 +1,21 @@
 import "server-only";
 import { randomBytes } from "node:crypto";
-import { mkdtemp, readdir, rm, stat } from "node:fs/promises";
+import { mkdtemp, readdir, rm, rename, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ChildProcess } from "node:child_process";
 import { AppError, toAppError } from "@/lib/errors";
 import type { JobState, JobStatus } from "@/lib/media-types";
 import { config } from "./config";
-import { killTree } from "./process";
+import { killTree, run } from "./process";
 import type { DownloadTokenPayload } from "./token";
-import { classifyFailure, ytdlp } from "./ytdlp";
+import { classifyFailure, ffmpegLocation, ytdlp } from "./ytdlp";
 
 interface Job {
   id: string;
   owner: string;
   payload: DownloadTokenPayload;
+  trim?: { start: number; end: number };
   status: JobStatus;
   progress: number | null;
   dir: string | null;
@@ -106,7 +107,7 @@ export function toJobState(job: Job): JobState {
   };
 }
 
-export function createJob(payload: DownloadTokenPayload, owner: string): Job {
+export function createJob(payload: DownloadTokenPayload, owner: string, trim?: { start: number; end: number }): Job {
   ensureSweeper();
 
   const active = [...store.jobs.values()].filter(
@@ -121,6 +122,7 @@ export function createJob(payload: DownloadTokenPayload, owner: string): Job {
     id: randomBytes(16).toString("base64url"),
     owner,
     payload,
+    trim,
     status: "queued",
     progress: null,
     dir: null,
@@ -167,6 +169,62 @@ function modeArgs(mode: DownloadTokenPayload["m"]): string[] {
     case "audio-m4a":
       return ["--extract-audio", "--audio-format", "m4a", "--embed-metadata"];
   }
+}
+
+async function trimVideo(filePath: string, start: number, end: number, job: Job): Promise<string> {
+  const ffmpeg = ffmpegLocation();
+  if (!ffmpeg) throw new AppError("INTERNAL", "ffmpeg not found");
+
+  const tmpPath = `${filePath}.trim.mp4`;
+  // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
+  const args = [
+    "-hide_banner",
+    "-loglevel",
+    "error",
+    "-ss",
+    start.toFixed(3),
+    "-i",
+    filePath,
+    "-t",
+    (end - start).toFixed(3),
+    "-map",
+    "0:v:0",
+    "-map",
+    "0:a:0?",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    "20",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-movflags",
+    "+faststart",
+    "-y",
+    tmpPath,
+  ];
+
+  job.status = "processing";
+  const result = await run(ffmpeg, args, {
+    timeoutMs: config.downloadTimeoutMs,
+    onSpawn: (child) => {
+      job.child = child;
+    },
+  });
+  job.child = null;
+
+  if (result.code !== 0) throw new AppError("INTERNAL", "ffmpeg trim failed");
+
+  // Replace original with trimmed
+  await rm(filePath);
+  await rename(tmpPath, filePath);
+
+  return filePath;
 }
 
 async function execute(job: Job): Promise<void> {
@@ -234,13 +292,16 @@ async function execute(job: Job): Promise<void> {
     // tell Turbopack not to trace them into the build output.)
     const resolved = path.resolve(/*turbopackIgnore: true*/ finalPath);
     if (path.dirname(resolved) !== path.resolve(/*turbopackIgnore: true*/ job.dir)) throw new AppError("INTERNAL");
-    const info = await stat(/*turbopackIgnore: true*/ resolved);
+    const trimmed = !!job.trim && payload.m === "video";
+    const finalFilePath = trimmed ? await trimVideo(resolved, job.trim!.start, job.trim!.end, job) : resolved;
+
+    const info = await stat(/*turbopackIgnore: true*/ finalFilePath);
     if (!info.isFile() || info.size === 0) throw new AppError("NO_MEDIA");
 
-    const ext = path.extname(resolved).slice(1).toLowerCase() || "bin";
+    const ext = path.extname(finalFilePath).slice(1).toLowerCase() || "bin";
     const label = payload.l === "audio" || payload.l === "best" ? "" : `-${payload.l}`;
-    job.filePath = resolved;
-    job.fileName = `${payload.n}${label}.${ext}`;
+    job.filePath = finalFilePath;
+    job.fileName = `${payload.n}${label}${trimmed ? "-clip" : ""}.${ext}`;
     job.sizeBytes = info.size;
     job.progress = 100;
     job.status = "ready";
