@@ -116,7 +116,7 @@ export const LANDING_PAGES: LandingPage[] = [
       { q: "How do I download every video in a carousel?", a: "Paste the post link once; yoink lists each video in the carousel with its own download button." },
       { q: "Are old IGTV links supported?", a: "Yes. Links containing /tv/ are treated like regular video posts." },
       { q: "Is there a limit on how many videos I can download?", a: "There's a fair-use rate limit to keep the service fast for everyone, but no daily cap for normal use." },
-      { q: "Do you store the videos I download?", a: "No. Files are prepared temporarily for your download and deleted automatically within minutes." },
+      { q: "Do you store the videos I download?", a: "No. Videos are processed right in your browser and saved straight to your device — they're never stored on our servers." },
     ],
   },
   {
@@ -254,6 +254,6 @@ export const HOME_FAQS: Faq[] = [
   { q: "Which sites does yoink support?", a: "Instagram (Reels, Stories, video posts & carousels), TikTok (without watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest videos." },
   { q: "Do I need to install an app or sign in?", a: "No. yoink runs in your browser on any phone, tablet or computer, and never asks for your social media logins." },
   { q: "What quality will I get?", a: "The highest quality the platform makes available, and you can always pick a smaller file instead." },
-  { q: "Do you keep copies of my downloads?", a: "No. Files are prepared temporarily for your download and automatically deleted within minutes. We don't keep a history of links." },
+  { q: "Do you keep copies of my downloads?", a: "No. Downloads are processed in your browser and saved straight to your device, so they're never stored on our servers. We don't keep a history of links." },
   { q: "Can I download private content?", a: "No. yoink only works with publicly accessible posts. Please respect creators and only download content you have the right to use." },
 ];

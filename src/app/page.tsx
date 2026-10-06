@@ -14,7 +14,7 @@ const FEATURES = [
   { title: "Max quality, always", body: "We list every resolution the platform has and merge video with the best audio track." },
   { title: "No watermarks", body: "TikTok's watermarked copy is filtered out. You get the clean stream, as uploaded." },
   { title: "MP3 in one tap", body: "Rip just the audio from any video as MP3, or grab the untouched original as M4A." },
-  { title: "Private by default", body: "No accounts, no logins, no link history. Files auto-delete from our servers within minutes." },
+  { title: "Private by default", body: "No accounts, no logins, no link history. Downloads are processed in your browser, never stored on our servers." },
 ];
 
 const PLATFORM_LINKS: PlatformLink[] = [

@@ -4,36 +4,22 @@ import { site } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: `Copyright & DMCA Policy | ${site.name}`,
-  description: `How ${site.name} respects copyright and how rights holders can contact us.`,
+  description: `How ${site.name} respects copyright and where rights holders can report infringing content.`,
   alternates: { canonical: "/copyright" },
 };
 
 export default function CopyrightPage() {
   return (
-    <LegalPage title="Copyright & DMCA" updated="October 1, 2026">
+    <LegalPage title="Copyright & DMCA" updated="October 6, 2026">
       <p>
-        {site.name} respects the rights of creators. We don&apos;t host or index content: every file is fetched on demand from
-        a link a user provides, served once, and deleted within minutes. We only support publicly accessible content and
-        never bypass DRM, paywalls, or private-account restrictions.
+        {site.name} respects the rights of creators. We don&apos;t host or index content: media is fetched on demand from a
+        link a user provides and processed in that user&apos;s browser, and nothing is kept on our servers. We only support
+        publicly accessible content and never bypass DRM, paywalls, or private-account restrictions.
       </p>
       <h2>For rights holders</h2>
       <p>
-        If you believe {site.name} is being used to infringe your copyright, or you&apos;d like a specific URL blocked from
-        being processed, email <a href={`mailto:${site.contactEmail}`}>{site.contactEmail}</a> with:
-      </p>
-      <ul>
-        <li>Identification of the copyrighted work.</li>
-        <li>The specific URL(s) of the content on the source platform.</li>
-        <li>Your contact information.</li>
-        <li>
-          A statement that you have a good-faith belief the use is not authorized, and that the information in your notice
-          is accurate, under penalty of perjury.
-        </li>
-        <li>Your physical or electronic signature.</li>
-      </ul>
-      <p>
-        Because the content itself lives on the original platform, you may also want to file a report with that platform
-        directly.
+        Because the content itself lives on the original platform, please report infringing material to the platform where
+        it&apos;s published. Once a platform removes a post or makes it private, {site.name} can no longer fetch it.
       </p>
     </LegalPage>
   );

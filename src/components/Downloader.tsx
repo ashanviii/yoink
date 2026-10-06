@@ -233,7 +233,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
               <ResultCard key={`${item.id}-${index}`} item={item} uploader={result.uploader} index={index} total={result.items.length} />
             ))}
             <p className="px-1 text-xs text-muted">
-              Only download content you own or have permission to use. Files are deleted from our servers within minutes.
+              Only download content you own or have permission to use. Files are processed in your browser and never stored on our servers.
             </p>
           </>
         )}

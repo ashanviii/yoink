@@ -4,7 +4,6 @@ export const site = {
   description:
     "yoink is a free, fast video downloader for Instagram Reels & Stories, TikTok (no watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest. Paste a link, trim if you like, download.",
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
-  contactEmail: process.env.NEXT_PUBLIC_CONTACT_EMAIL ?? "legal@example.com",
 } as const;
 
 export function absoluteUrl(path = "/"): string {

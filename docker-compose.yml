@@ -6,7 +6,6 @@ services:
       context: .
       args:
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?set NEXT_PUBLIC_SITE_URL in .env}
-        NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL:?set NEXT_PUBLIC_CONTACT_EMAIL in .env}
     env_file: .env
     environment:
       # Fail fast at `docker compose up` instead of at the first request.

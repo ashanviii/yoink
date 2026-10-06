@@ -116,7 +116,7 @@ git clone https://github.com/ashanviii/yoink.git
 cd yoink
 npm ci
 cp .env.example .env
-nano .env   # set YOINK_SECRET, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL,
+nano .env   # set YOINK_SECRET, NEXT_PUBLIC_SITE_URL,
             # YTDLP_PATH=$HOME/yt-dlp-env/bin/yt-dlp, YOINK_TRUSTED_PROXY_HOPS=1
 npm run build
 
@@ -141,7 +141,6 @@ Create `.env` file (see `.env.example` for full list):
 DOMAIN=yoink.example.com                           # Used by Caddy for HTTPS
 YOINK_SECRET=<generate with: openssl rand -base64 48>
 NEXT_PUBLIC_SITE_URL=https://yoink.example.com    # Public URL
-NEXT_PUBLIC_CONTACT_EMAIL=legal@yoink.example.com # For privacy page
 
 # Recommended: Tune these based on server resources
 YOINK_MAX_CONCURRENT_RESOLVES=6   # Parallel fetch operations

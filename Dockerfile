@@ -12,9 +12,7 @@ FROM base AS build
 WORKDIR /app
 # NEXT_PUBLIC_* values are inlined into the build, so they must be known here.
 ARG NEXT_PUBLIC_SITE_URL
-ARG NEXT_PUBLIC_CONTACT_EMAIL
-ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL \
-    NEXT_PUBLIC_CONTACT_EMAIL=$NEXT_PUBLIC_CONTACT_EMAIL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build

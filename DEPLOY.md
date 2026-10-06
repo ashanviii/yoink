@@ -94,7 +94,6 @@ In `nano`, set these (use your own domain), then save with **Ctrl+O, Enter, Ctrl
 DOMAIN=yoink-yourname.duckdns.org
 YOINK_SECRET=<paste the openssl output>
 NEXT_PUBLIC_SITE_URL=https://yoink-yourname.duckdns.org
-NEXT_PUBLIC_CONTACT_EMAIL=you@example.com
 
 # Tuned for 4 OCPU / 24 GB. Halve these on 2 OCPU / 12 GB.
 YOINK_MAX_CONCURRENT_RESOLVES=12
