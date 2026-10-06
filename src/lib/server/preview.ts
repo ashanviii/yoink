@@ -26,6 +26,8 @@ const TTL_MS = Math.max(30 * 60_000, config.resolveCacheTtlMs + 5 * 60_000);
 const MAX_ENTRIES = 2_000;
 const MAX_STILLS_PER_SOURCE = 24;
 const STILL_WIDTH = 480;
+/** Clips up to this long decode every frame for the filmstrip; longer ones decode keyframes only. */
+const FULL_DECODE_MAX_SEC = 20;
 const globalForPreview = globalThis as unknown as { __yoinkPreviews?: Map<string, PreviewSource>; __yoinkPreviewSlots?: Semaphore };
 const sources = (globalForPreview.__yoinkPreviews ??= new Map());
 const slots = (globalForPreview.__yoinkPreviewSlots ??= new Semaphore(config.maxConcurrentResolves, config.maxQueuedResolves, config.resolveQueueWaitMs));
@@ -42,7 +44,7 @@ export function registerPreviewSource(url: string, headers: Record<string, strin
 }
 
 /** Runs ffmpeg against the remote stream and returns the single JPEG it writes. */
-async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs: string[]): Promise<Buffer> {
+async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs: string[], timeoutMs = 30_000): Promise<Buffer> {
   const ffmpeg = ffmpegLocation();
   if (!ffmpeg) throw new AppError("INTERNAL", "ffmpeg not found");
 
@@ -74,7 +76,7 @@ async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs
         "-y",
         out,
       ],
-      { timeoutMs: 30_000 },
+      { timeoutMs },
     );
     const image = result.code === 0 ? await readFile(out).catch(() => null) : null;
     if (!image?.length) throw new AppError("NOT_FOUND", "Preview unavailable.");
@@ -87,8 +89,9 @@ async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs
 function renderSprite(source: PreviewSource): Promise<Buffer> {
   return renderJpeg(
     source,
-    // Long videos: keyframes only (~10x cheaper). Short clips may have just one keyframe.
-    source.durationSec > 60 ? ["-skip_frame", "nokey"] : [],
+    // Keyframes only is ~6x less CPU (they come every 2-4s on these platforms). A very short
+    // clip may have just one or two, which would make every tile the same, so decode those fully.
+    source.durationSec > FULL_DECODE_MAX_SEC ? ["-skip_frame", "nokey"] : [],
     [
       "-vf",
       // tpad repeats the last frame so the tile always fills, even if the final keyframe lands early.
@@ -96,6 +99,8 @@ function renderSprite(source: PreviewSource): Promise<Buffer> {
       "-q:v",
       "5",
     ],
+    // The whole stream still has to be read, so give long videos more time (5 min -> 60s, capped at 90s).
+    Math.min(90_000, 30_000 + source.durationSec * 100),
   );
 }
 

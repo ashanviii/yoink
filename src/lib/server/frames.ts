@@ -16,8 +16,9 @@ export interface ExtractedFrames {
 type ExtractOptions = Pick<RunOptions, "timeoutMs" | "onSpawn">;
 
 function encoderArgs(format: FrameFormat): string[] {
-  // JPEG q 2 is near-lossless; PNG is lossless already.
-  return format === "jpg" ? ["-q:v", "2"] : [];
+  // JPEG q 2 is near-lossless. PNG is lossless at any setting; ffmpeg's default
+  // (no row filter) makes ~40% larger files than the "up" filter for the same CPU.
+  return format === "jpg" ? ["-q:v", "2"] : ["-pred", "up", "-compression_level", "3"];
 }
 
 async function exists(file: string): Promise<boolean> {
