@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, getJob, jobFileUrl, startJob } from "@/lib/api-client";
-import type { JobState } from "@/lib/media-types";
+import type { JobParams, JobState } from "@/lib/media-types";
 
 export type DownloadPhase = "idle" | "starting" | "working" | "ready" | "error";
 
@@ -25,8 +25,13 @@ function triggerSave(url: string, fileName: string | null) {
   anchor.remove();
 }
 
-export function useDownloadJob(token: string, trim?: { start: number; end: number }) {
-  const [state, setState] = useState<DownloadState>({ phase: "idle", job: null, error: null, fileUrl: null });
+const IDLE: DownloadState = { phase: "idle", job: null, error: null, fileUrl: null };
+
+export function useDownloadJob(token: string, params?: JobParams) {
+  const [state, setState] = useState<DownloadState>(IDLE);
+  // Which params the current result belongs to; a finished file for an old trim/frame is stale.
+  const [stateKey, setStateKey] = useState("");
+  const key = JSON.stringify(params ?? {});
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -36,9 +41,11 @@ export function useDownloadJob(token: string, trim?: { start: number; end: numbe
     const controller = new AbortController();
     abortRef.current = controller;
     setState({ phase: "starting", job: null, error: null, fileUrl: null });
+    setStateKey(key);
 
     try {
-      let job = await startJob(token, trim);
+      // Rebuilt from `key` so callers can pass a fresh params object every render.
+      let job = await startJob(token, JSON.parse(key) as JobParams);
       setState((s) => ({ ...s, phase: "working", job }));
 
       while (job.status !== "ready" && job.status !== "error") {
@@ -61,11 +68,12 @@ export function useDownloadJob(token: string, trim?: { start: number; end: numbe
       const message = err instanceof ApiError ? err.message : "Download failed. Try again.";
       setState({ phase: "error", job: null, error: message, fileUrl: null });
     }
-  }, [token, trim]);
+  }, [token, key]);
 
   const saveAgain = useCallback(() => {
     if (state.fileUrl) triggerSave(state.fileUrl, state.job?.fileName ?? null);
   }, [state.fileUrl, state.job?.fileName]);
 
-  return { state, start, saveAgain };
+  const stale = stateKey !== key && (state.phase === "ready" || state.phase === "error");
+  return { state: stale ? IDLE : state, start, saveAgain };
 }

@@ -1,5 +1,5 @@
 import type { ApiErrorBody } from "./errors";
-import type { JobState, ResolveResponse } from "./media-types";
+import type { JobParams, JobState, ResolveResponse } from "./media-types";
 
 export class ApiError extends Error {
   constructor(
@@ -35,12 +35,20 @@ export function resolveMedia(url: string, signal?: AbortSignal): Promise<Resolve
   return request("/api/resolve", { method: "POST", body: JSON.stringify({ url }), signal });
 }
 
-export function startJob(token: string, trim?: { start: number; end: number }): Promise<JobState> {
-  return request("/api/jobs", { method: "POST", body: JSON.stringify({ token, trim }) });
+export function startJob(token: string, params?: JobParams): Promise<JobState> {
+  return request("/api/jobs", { method: "POST", body: JSON.stringify({ token, ...params }) });
 }
 
 export function getJob(id: string, signal?: AbortSignal): Promise<JobState> {
   return request(`/api/jobs/${encodeURIComponent(id)}`, { signal, cache: "no-store" });
+}
+
+export function previewSpriteUrl(previewId: string): string {
+  return `/api/preview/${encodeURIComponent(previewId)}`;
+}
+
+export function previewFrameUrl(previewId: string, sec: number): string {
+  return `${previewSpriteUrl(previewId)}/frame?t=${sec.toFixed(1)}`;
 }
 
 export function jobFileUrl(id: string): string {

@@ -16,12 +16,16 @@ interface PreviewSource {
   durationSec: number;
   expires: number;
   sprite?: Promise<Buffer>;
+  /** Single preview frames keyed by tenth of a second. */
+  stills?: Map<number, Promise<Buffer>>;
 }
 
 // Platform CDN URLs stay server-side; clients only ever see the random id.
 // Must outlive cached resolve responses, which hand out the same id again.
 const TTL_MS = Math.max(30 * 60_000, config.resolveCacheTtlMs + 5 * 60_000);
 const MAX_ENTRIES = 2_000;
+const MAX_STILLS_PER_SOURCE = 24;
+const STILL_WIDTH = 480;
 const globalForPreview = globalThis as unknown as { __yoinkPreviews?: Map<string, PreviewSource>; __yoinkPreviewSlots?: Semaphore };
 const sources = (globalForPreview.__yoinkPreviews ??= new Map());
 const slots = (globalForPreview.__yoinkPreviewSlots ??= new Semaphore(config.maxConcurrentResolves, config.maxQueuedResolves, config.resolveQueueWaitMs));
@@ -37,12 +41,13 @@ export function registerPreviewSource(url: string, headers: Record<string, strin
   return id;
 }
 
-async function renderSprite(source: PreviewSource): Promise<Buffer> {
+/** Runs ffmpeg against the remote stream and returns the single JPEG it writes. */
+async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs: string[]): Promise<Buffer> {
   const ffmpeg = ffmpegLocation();
   if (!ffmpeg) throw new AppError("INTERNAL", "ffmpeg not found");
 
   const dir = await mkdtemp(path.join(config.tmpDir ?? tmpdir(), "yoink-preview-"));
-  const out = path.join(dir, "sprite.jpg");
+  const out = path.join(dir, "preview.jpg");
   const headerBlob = Object.entries(source.headers)
     .filter(([key, value]) => /^[A-Za-z0-9-]+$/.test(key) && !/[\r\n]/.test(value))
     .map(([key, value]) => `${key}: ${value}\r\n`)
@@ -59,37 +64,74 @@ async function renderSprite(source: PreviewSource): Promise<Buffer> {
         "-protocol_whitelist",
         "https,http,tls,tcp,crypto,hls",
         ...(headerBlob ? ["-headers", headerBlob] : []),
-        // Long videos: keyframes only (~10x cheaper). Short clips may have just one keyframe.
-        ...(source.durationSec > 60 ? ["-skip_frame", "nokey"] : []),
+        ...inputArgs,
         "-i",
         source.url,
         "-an",
-        "-vf",
-        // tpad repeats the last frame so the tile always fills, even if the final keyframe lands early.
-        `tpad=stop_mode=clone:stop_duration=${source.durationSec.toFixed(3)},fps=${PREVIEW_FRAMES}/${source.durationSec.toFixed(3)},scale=${PREVIEW_FRAME_WIDTH}:-2,tile=${PREVIEW_FRAMES}x1`,
+        ...outputArgs,
         "-frames:v",
         "1",
-        "-q:v",
-        "5",
         "-y",
         out,
       ],
       { timeoutMs: 30_000 },
     );
-    const sprite = result.code === 0 ? await readFile(out).catch(() => null) : null;
-    if (!sprite?.length) throw new AppError("NOT_FOUND", "Preview unavailable.");
-    return sprite;
+    const image = result.code === 0 ? await readFile(out).catch(() => null) : null;
+    if (!image?.length) throw new AppError("NOT_FOUND", "Preview unavailable.");
+    return image;
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 
-export function getPreviewSprite(id: string): Promise<Buffer> {
+function renderSprite(source: PreviewSource): Promise<Buffer> {
+  return renderJpeg(
+    source,
+    // Long videos: keyframes only (~10x cheaper). Short clips may have just one keyframe.
+    source.durationSec > 60 ? ["-skip_frame", "nokey"] : [],
+    [
+      "-vf",
+      // tpad repeats the last frame so the tile always fills, even if the final keyframe lands early.
+      `tpad=stop_mode=clone:stop_duration=${source.durationSec.toFixed(3)},fps=${PREVIEW_FRAMES}/${source.durationSec.toFixed(3)},scale=${PREVIEW_FRAME_WIDTH}:-2,tile=${PREVIEW_FRAMES}x1`,
+      "-q:v",
+      "5",
+    ],
+  );
+}
+
+function lookup(id: string): PreviewSource {
   const source = /^[A-Za-z0-9_-]{16,32}$/.test(id) ? sources.get(id) : undefined;
   if (!source || source.expires <= Date.now()) throw new AppError("NOT_FOUND", "Preview expired — fetch the link again.");
+  return source;
+}
+
+export function getPreviewSprite(id: string): Promise<Buffer> {
+  const source = lookup(id);
   source.sprite ??= slots.run(() => renderSprite(source)).catch((err) => {
     source.sprite = undefined;
     throw err;
   });
   return source.sprite;
+}
+
+/** One exact frame (decoded up to `sec`, not snapped to a keyframe) for the frame picker. */
+export function getPreviewStill(id: string, sec: number): Promise<Buffer> {
+  const source = lookup(id);
+  if (!Number.isFinite(sec) || sec < 0 || sec > source.durationSec) throw new AppError("BAD_REQUEST", "That moment is outside the video.");
+  const key = Math.round(sec * 10);
+  const stills = (source.stills ??= new Map());
+  let still = stills.get(key);
+  if (!still) {
+    if (stills.size >= MAX_STILLS_PER_SOURCE) stills.delete(stills.keys().next().value!);
+    // The last instant of a video often has no frame left to decode; back off slightly.
+    const at = Math.max(0, Math.min(key / 10, source.durationSec - 0.1));
+    still = slots
+      .run(() => renderJpeg(source, ["-ss", at.toFixed(3)], ["-vf", `scale=${STILL_WIDTH}:-2`, "-q:v", "4"]))
+      .catch((err) => {
+        stills.delete(key);
+        throw err;
+      });
+    stills.set(key, still);
+  }
+  return still;
 }

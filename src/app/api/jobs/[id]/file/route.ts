@@ -15,6 +15,7 @@ const MIME: Record<string, string> = {
   mkv: "video/x-matroska",
   jpg: "image/jpeg",
   png: "image/png",
+  zip: "application/zip",
 };
 
 function contentDisposition(fileName: string): string {

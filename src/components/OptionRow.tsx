@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBytes } from "@/lib/format";
-import type { MediaOption, TrimParams } from "@/lib/media-types";
+import type { JobParams, MediaOption, TrimParams } from "@/lib/media-types";
 import { AlertIcon, CheckIcon, DownloadIcon, RetryIcon } from "./icons";
 import { useDownloadJob } from "./useDownloadJob";
 
@@ -11,11 +11,28 @@ const STAGE_LABEL: Record<string, string> = {
   processing: "Stitching it together…",
 };
 
-export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimParams }) {
-  const { state, start, saveAgain } = useDownloadJob(option.token, trim);
+interface JobRowProps {
+  token: string;
+  params?: JobParams;
+  label: string;
+  /** Text on the download button, e.g. "MP4". */
+  action: string;
+  detail: string;
+  badges?: string[];
+  best?: boolean;
+  sizeBytes?: number | null;
+  sizeIsEstimate?: boolean;
+  processingLabel?: string;
+}
+
+/** One downloadable thing: runs a job on click and shows its progress inline. */
+export function JobRow({ token, params, label, action, detail, badges = [], best, sizeBytes = null, sizeIsEstimate = false, processingLabel }: JobRowProps) {
+  const { state, start, saveAgain } = useDownloadJob(token, params);
   const busy = state.phase === "starting" || state.phase === "working";
   const progress = state.job?.progress ?? 0;
-  const size = formatBytes(state.job?.sizeBytes ?? option.sizeBytes, state.job?.sizeBytes ? false : option.sizeIsEstimate);
+  const size = formatBytes(state.job?.sizeBytes ?? sizeBytes, state.job?.sizeBytes ? false : sizeIsEstimate);
+  const status = state.job?.status ?? "queued";
+  const stage = (status === "processing" && processingLabel) || STAGE_LABEL[status] || "Working…";
 
   return (
     <li className="relative overflow-hidden rounded-2xl border border-border bg-surface transition hover:border-text/40">
@@ -29,13 +46,13 @@ export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimPa
       <div className="relative flex items-center gap-3 p-3 pl-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-lg font-bold">{option.label}</span>
-            {option.best && (
+            <span className="font-display text-lg font-bold">{label}</span>
+            {best && (
               <span className="rounded-full bg-pop px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
                 Best
               </span>
             )}
-            {option.badges.map((badge) => (
+            {badges.map((badge) => (
               <span key={badge} className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
                 {badge}
               </span>
@@ -43,12 +60,12 @@ export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimPa
           </div>
           <p className="truncate text-xs text-muted" aria-live="polite">
             {busy
-              ? `${STAGE_LABEL[state.job?.status ?? "queued"] ?? "Working…"}${state.job?.status === "downloading" ? ` ${Math.round(progress)}%` : ""}`
+              ? `${stage}${state.job?.status === "downloading" ? ` ${Math.round(progress)}%` : ""}`
               : state.phase === "error"
                 ? <span className="text-danger">{state.error}</span>
                 : state.phase === "ready"
                   ? `Saved${size ? ` · ${size}` : ""} — check your downloads`
-                  : [option.detail, size].filter(Boolean).join(" · ")}
+                  : [detail, size].filter(Boolean).join(" · ")}
           </p>
         </div>
 
@@ -65,7 +82,7 @@ export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimPa
             type="button"
             onClick={start}
             disabled={busy}
-            aria-label={`Download ${option.label} ${option.ext.toUpperCase()}`}
+            aria-label={`Download ${label} ${action}`}
             className="flex shrink-0 items-center gap-1.5 rounded-full bg-text px-4 py-2.5 text-sm font-bold text-bg transition hover:-translate-y-0.5 hover:shadow-[0_4px_0_0_var(--pop)] active:translate-y-0 active:scale-95 active:shadow-none disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-none"
           >
             {busy ? (
@@ -77,10 +94,26 @@ export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimPa
             ) : (
               <AlertIcon size={16} />
             )}
-            <span>{busy ? "Wait" : state.phase === "error" ? "Retry" : option.ext.toUpperCase()}</span>
+            <span>{busy ? "Wait" : state.phase === "error" ? "Retry" : action}</span>
           </button>
         )}
       </div>
     </li>
+  );
+}
+
+export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimParams }) {
+  return (
+    <JobRow
+      token={option.token}
+      params={trim ? { trim } : undefined}
+      label={option.label}
+      action={option.ext.toUpperCase()}
+      detail={option.detail}
+      badges={option.badges}
+      best={option.best}
+      sizeBytes={option.sizeBytes}
+      sizeIsEstimate={option.sizeIsEstimate}
+    />
   );
 }

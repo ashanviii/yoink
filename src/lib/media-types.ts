@@ -9,6 +9,22 @@ export interface TrimParams {
   end: number;   // seconds
 }
 
+export type FrameFormat = "jpg" | "png";
+
+/** Still images pulled from the video: one frame at a timestamp, or one every `every` seconds (zipped). */
+export type FrameParams =
+  | { mode: "single"; at: number; format: FrameFormat }
+  | { mode: "interval"; every: number; format: FrameFormat };
+
+/** Cap on images in one frame-set ZIP. */
+export const MAX_EXTRACT_FRAMES = 120;
+
+/** Extra options for POST /api/jobs; at most one of these applies. */
+export interface JobParams {
+  trim?: TrimParams;
+  frames?: FrameParams;
+}
+
 export interface MediaOption {
   /** Signed token the client sends back to start this download. */
   token: string;

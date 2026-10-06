@@ -5,8 +5,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ChildProcess } from "node:child_process";
 import { AppError, toAppError } from "@/lib/errors";
-import type { JobState, JobStatus } from "@/lib/media-types";
+import type { FrameParams, JobParams, JobState, JobStatus } from "@/lib/media-types";
 import { config } from "./config";
+import { extractFrames } from "./frames";
 import { killTree, run } from "./process";
 import { snapchatDownloadSource } from "./snapchat";
 import type { DownloadTokenPayload } from "./token";
@@ -17,6 +18,7 @@ interface Job {
   owner: string;
   payload: DownloadTokenPayload;
   trim?: { start: number; end: number };
+  frames?: FrameParams;
   status: JobStatus;
   progress: number | null;
   dir: string | null;
@@ -108,7 +110,7 @@ export function toJobState(job: Job): JobState {
   };
 }
 
-export function createJob(payload: DownloadTokenPayload, owner: string, trim?: { start: number; end: number }): Job {
+export function createJob(payload: DownloadTokenPayload, owner: string, { trim, frames }: JobParams = {}): Job {
   ensureSweeper();
 
   const active = [...store.jobs.values()].filter(
@@ -124,6 +126,7 @@ export function createJob(payload: DownloadTokenPayload, owner: string, trim?: {
     owner,
     payload,
     trim,
+    frames,
     status: "queued",
     progress: null,
     dir: null,
@@ -297,16 +300,31 @@ async function execute(job: Job): Promise<void> {
     // tell Turbopack not to trace them into the build output.)
     const resolved = path.resolve(/*turbopackIgnore: true*/ finalPath);
     if (path.dirname(resolved) !== path.resolve(/*turbopackIgnore: true*/ job.dir)) throw new AppError("INTERNAL");
-    const trimmed = !!job.trim && payload.m === "video";
-    const finalFilePath = trimmed ? await trimVideo(resolved, job.trim!.start, job.trim!.end, job) : resolved;
+    const label = payload.l === "audio" || payload.l === "best" ? "" : `-${payload.l}`;
+    let finalFilePath = resolved;
+    let suffix = label;
+    if (job.frames && payload.m === "video") {
+      job.status = "processing";
+      const frames = await extractFrames(resolved, job.frames, {
+        timeoutMs: config.downloadTimeoutMs,
+        onSpawn: (child) => {
+          job.child = child;
+        },
+      });
+      job.child = null;
+      finalFilePath = frames.filePath;
+      suffix = `-${frames.suffix}`;
+    } else if (job.trim && payload.m === "video") {
+      finalFilePath = await trimVideo(resolved, job.trim.start, job.trim.end, job);
+      suffix = `${label}-clip`;
+    }
 
     const info = await stat(/*turbopackIgnore: true*/ finalFilePath);
     if (!info.isFile() || info.size === 0) throw new AppError("NO_MEDIA");
 
     const ext = path.extname(finalFilePath).slice(1).toLowerCase() || "bin";
-    const label = payload.l === "audio" || payload.l === "best" ? "" : `-${payload.l}`;
     job.filePath = finalFilePath;
-    job.fileName = `${payload.n}${label}${trimmed ? "-clip" : ""}.${ext}`;
+    job.fileName = `${payload.n}${suffix}.${ext}`;
     job.sizeBytes = info.size;
     job.progress = 100;
     job.status = "ready";

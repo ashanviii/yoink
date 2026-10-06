@@ -2,7 +2,7 @@
 
 A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **TikTok** (no watermark), **Facebook** (videos, Reels), **Snapchat** (Spotlight) and **Pinterest** videos.
 
-**Flow:** Paste URL → fetch → optionally trim (filmstrip editor) → pick quality/format → download.
+**Flow:** Paste URL → fetch → optionally trim (filmstrip editor) → pick quality/format → download. Or switch to **Frames** to save stills.
 
 ---
 
@@ -10,6 +10,7 @@ A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, 
 
 - **Multi-platform:** Instagram, TikTok (watermark-free), Facebook, Snapchat Spotlight, Pinterest
 - **Trim before download:** drag handles on a filmstrip of the video; only the kept range is re-encoded (frame-accurate)
+- **Extract frames:** scrub to any moment and save that exact frame as JPG/PNG at the best available quality, or grab a set (one every 0.5–60s, up to 120 frames) as a ZIP
 - **Mobile-first UI:** Works great on phones; desktop too
 - **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
 - **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
@@ -300,11 +301,12 @@ Monitor with load testing and adjust based on memory usage.
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
 | POST | `/api/resolve` | Extract video/audio info from URL, return download options with signed tokens |
-| POST | `/api/jobs` | Create download job with signed token (optional `trim: {start, end}` in seconds) |
+| POST | `/api/jobs` | Create download job with signed token. Optional, video tokens only, one of: `trim: {start, end}` (seconds), or `frames: {mode: "single", at, format}` / `frames: {mode: "interval", every, format}` with `format` `jpg` or `png` (single image, or ZIP) |
 | GET | `/api/jobs/:id` | Poll job status (`downloading`, `processing`, `ready`) |
 | GET | `/api/jobs/:id/file` | Stream finished file (auto-deleted after `YOINK_FILE_TTL_MS`) |
 | GET | `/api/thumb` | Proxy image URLs (whitelisted CDNs only) |
-| GET | `/api/preview/:id` | Filmstrip sprite (16 frames) for the trim editor; id comes from `/api/resolve` |
+| GET | `/api/preview/:id` | Filmstrip sprite (16 frames) for the trim editor and frame picker; id comes from `/api/resolve` |
+| GET | `/api/preview/:id/frame?t=` | Exact low-res frame at `t` seconds for the frame picker |
 | GET | `/api/health` | Health check (returns queue depth, load info) |
 
 All requests are rate-limited per client IP.
