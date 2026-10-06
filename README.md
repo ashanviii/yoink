@@ -10,7 +10,7 @@ A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, 
 
 - **Multi-platform:** Instagram, TikTok (watermark-free), Facebook, Snapchat Spotlight, Pinterest
 - **Trim before download:** drag handles on a filmstrip of the video; only the kept range is re-encoded (frame-accurate)
-- **Extract frames:** scrub to any moment and save that exact frame as JPG/PNG at the best available quality, or grab a set (one every 0.5–60s, up to 120 frames) as a ZIP
+- **Extract frames:** scrub to any moment and save that exact frame as JPG/PNG at the best available quality, or grab a set (one every 0.5–60s, up to 120 frames) as a ZIP. The source video is cached briefly (`YOINK_FRAME_CACHE_MB`, default 1024), so repeat grabs skip the download
 - **Mobile-first UI:** Works great on phones; desktop too
 - **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
 - **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
