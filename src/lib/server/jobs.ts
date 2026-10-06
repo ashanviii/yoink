@@ -8,6 +8,7 @@ import { AppError, toAppError } from "@/lib/errors";
 import type { JobState, JobStatus } from "@/lib/media-types";
 import { config } from "./config";
 import { killTree, run } from "./process";
+import { snapchatDownloadSource } from "./snapchat";
 import type { DownloadTokenPayload } from "./token";
 import { classifyFailure, ffmpegLocation, ytdlp } from "./ytdlp";
 
@@ -234,14 +235,18 @@ async function execute(job: Job): Promise<void> {
     job.progress = 0;
     job.dir = await mkdtemp(path.join(baseTmpDir(), DIR_PREFIX));
 
+    const source = payload.p === "snapchat" ? await snapchatDownloadSource(payload.u) : payload.u;
+    // A direct CDN file is a single format; the page-level selector can't match it.
+    const format = source !== payload.u && payload.m === "video" ? "b" : payload.f;
+
     // Selectors like "137+140/..." download two streams before merging.
-    const streams = payload.f.split("/")[0].includes("+") ? 2 : 1;
+    const streams = format.split("/")[0].includes("+") ? 2 : 1;
     const seenStreams: string[] = [];
     let finalPath: string | null = null;
 
     const args = [
       "--format",
-      payload.f,
+      format,
       "--output",
       path.join(job.dir, "%(id).80B.%(ext)s"),
       "--restrict-filenames",
@@ -259,7 +264,7 @@ async function execute(job: Job): Promise<void> {
       ...modeArgs(payload.m),
     ];
 
-    const result = await ytdlp(args, payload.u, {
+    const result = await ytdlp(args, source, {
       timeoutMs: config.downloadTimeoutMs,
       onSpawn: (child) => {
         job.child = child;
