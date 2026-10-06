@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Multi-arch: builds on x86_64 and ARM64 (e.g. Oracle Cloud Ampere).
+# Multi-arch: builds on x86_64 and ARM64.
 FROM node:24-bookworm-slim AS base
 ENV NEXT_TELEMETRY_DISABLED=1
 

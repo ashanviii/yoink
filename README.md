@@ -57,7 +57,7 @@ Deploys yoink + Caddy (automatic HTTPS) with one command.
 
 **Prerequisites:**
 - Docker + Docker Compose installed
-- A domain (or DuckDNS subdomain)
+- A domain name pointing at the server
 - `.env` file configured
 
 **Setup:**
@@ -239,17 +239,16 @@ Reference results on a laptop (8 cores, home connection):
 
 ---
 
-## 🆓 Free Deployment (Oracle Cloud Always Free)
+## 🖥️ Server Deployment
 
-**Steps:** 30–45 minutes first time.
+**Steps:** 20–30 minutes first time, on any Linux VPS.
 
-→ **See [DEPLOY.md](DEPLOY.md)** for step-by-step guide:
-1. Create Oracle Cloud free-tier account
-2. Spin up 4-CPU ARM server (24 GB RAM, free)
-3. Open ports 80/443
-4. Get free domain (DuckDNS)
-5. Clone repo, configure `.env`, `docker compose up`
-6. Done! Runs the full downloader with automatic HTTPS.
+→ **See [DEPLOY.md](DEPLOY.md)** for the step-by-step guide:
+1. Point your domain at the server
+2. Open ports 80/443
+3. Install Docker
+4. Clone repo, configure `.env`
+5. `docker compose up -d --build` — runs the full downloader with automatic HTTPS
 
 **Daily operations:**
 ```bash
@@ -275,12 +274,11 @@ docker compose restart yoink
 
 | Problem | Solution |
 | --- | --- |
-| **Certificate errors in `docker compose logs caddy`** | Check DNS points to server IP; verify ports 80/443 open in firewall (Oracle has 2: security list + iptables) |
+| **Certificate errors in `docker compose logs caddy`** | Check DNS points to server IP; verify ports 80/443 are open in your provider's firewall and the server's own |
 | **"set YOINK_SECRET in .env" error** | `.env` missing required variable; run `openssl rand -base64 48` and add it |
 | **Lots of "We're at capacity" (503 BUSY)** | Raise `YOINK_MAX_CONCURRENT_RESOLVES`, then `docker compose up -d` |
 | **Instagram Stories return "login required"** | Need `YTDLP_COOKIES_FILE` with logged-in cookies (may violate TOS — your choice) |
 | **TikTok blocked (e.g., India)** | Set `YTDLP_PROXY=socks5://...` to proxy requests |
-| **Server keeps getting reclaimed (Oracle)** | Oracle reclaims idle Always Free instances. Upgrading to Pay-As-You-Go (still free within limits) exempts it |
 
 ---
 
