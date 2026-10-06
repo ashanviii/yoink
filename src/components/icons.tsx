@@ -106,3 +106,11 @@ export const RetryIcon = (p: IconProps) => (
     <path d="M3 3v5h5" />
   </svg>
 );
+
+export const ImageIcon = (p: IconProps) => (
+  <svg {...base(p)}>
+    <rect x="3" y="4" width="18" height="16" rx="3" />
+    <circle cx="9" cy="9.5" r="1.5" />
+    <path d="m21 15-4.5-4.5L7 20" />
+  </svg>
+);

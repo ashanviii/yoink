@@ -1,51 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type CSSProperties } from "react";
-import { PREVIEW_FRAMES, type TrimParams } from "@/lib/media-types";
+import { useId, useRef, useState } from "react";
+import type { TrimParams } from "@/lib/media-types";
+import { FilmstripFrames, STRIP_HEIGHT_PX, clock, frameIndex, frameStyle, useSprite, type Sprite } from "./filmstrip";
 
 const MIN_CLIP_SEC = 0.5;
-const STRIP_HEIGHT_PX = 56;
-
-function clock(sec: number): string {
-  const m = Math.floor(sec / 60);
-  const s = sec - m * 60;
-  return `${m}:${s.toFixed(1).padStart(4, "0")}`;
-}
-
-type Sprite = { status: "loading" } | { status: "error" } | { status: "ready"; url: string; aspect: number };
-
-/** Loads the filmstrip sprite; `aspect` is a single frame's width / height. */
-function useSprite(previewId: string | null, active: boolean): Sprite {
-  const [sprite, setSprite] = useState<Sprite>({ status: "loading" });
-  const [requested, setRequested] = useState(false);
-  if (active && previewId && !requested) setRequested(true);
-
-  useEffect(() => {
-    if (!requested || !previewId) return;
-    const url = `/api/preview/${encodeURIComponent(previewId)}`;
-    const img = new Image();
-    img.onload = () => setSprite({ status: "ready", url, aspect: img.naturalWidth / PREVIEW_FRAMES / img.naturalHeight });
-    img.onerror = () => setSprite({ status: "error" });
-    img.src = url;
-    return () => {
-      img.onload = img.onerror = null;
-    };
-  }, [requested, previewId]);
-
-  return previewId ? sprite : { status: "error" };
-}
-
-function frameIndex(sec: number, duration: number): number {
-  return Math.min(PREVIEW_FRAMES - 1, Math.max(0, Math.floor((sec / duration) * PREVIEW_FRAMES)));
-}
-
-function frameStyle(url: string, index: number): CSSProperties {
-  return {
-    backgroundImage: `url(${url})`,
-    backgroundSize: `${PREVIEW_FRAMES * 100}% 100%`,
-    backgroundPosition: `${(index / (PREVIEW_FRAMES - 1)) * 100}% 0`,
-  };
-}
 
 function FramePreview({ sprite, sec, duration, label }: { sprite: Sprite; sec: number; duration: number; label: string }) {
   const aspect = sprite.status === "ready" ? sprite.aspect : 9 / 16;
@@ -84,7 +43,6 @@ function TrimStrip({ sprite, start, end, duration, onChange }: StripProps) {
   const drag = useRef<{ mode: DragMode; offset: number } | null>(null);
   const left = (start / duration) * 100;
   const right = 100 - (end / duration) * 100;
-  const frameWidth = sprite.status === "ready" ? STRIP_HEIGHT_PX * sprite.aspect : 0;
 
   const timeAt = (clientX: number) => {
     const rect = framesRef.current!.getBoundingClientRect();
@@ -149,20 +107,7 @@ function TrimStrip({ sprite, start, end, duration, onChange }: StripProps) {
     >
       <div ref={framesRef} className="relative size-full">
         <div className="absolute inset-0 overflow-hidden rounded-md bg-surface">
-          {sprite.status === "ready" ? (
-            <div className="flex size-full">
-              {Array.from({ length: PREVIEW_FRAMES }, (_, i) => (
-                <div key={i} className="relative h-full flex-1 overflow-hidden">
-                  <div
-                    className="absolute inset-y-0 left-1/2 -translate-x-1/2"
-                    style={{ width: frameWidth, ...frameStyle(sprite.url, i) }}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : sprite.status === "loading" ? (
-            <div className="grid size-full animate-pulse place-items-center bg-surface-2 text-xs text-muted">Loading frames…</div>
-          ) : null}
+          <FilmstripFrames sprite={sprite} />
           <div className="absolute inset-y-0 left-0 bg-bg/75" style={{ width: `${left}%` }} />
           <div className="absolute inset-y-0 right-0 bg-bg/75" style={{ width: `${right}%` }} />
         </div>

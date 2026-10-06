@@ -3,9 +3,15 @@
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
 import type { MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
-import { FilmIcon, MusicIcon } from "./icons";
+import { FrameExtractor } from "./FrameExtractor";
+import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
 import { TrimEditor } from "./TrimEditor";
+
+type Tab = OptionKind | "frames";
+
+const TAB_LABEL: Record<Tab, string> = { video: "Video", audio: "Audio", frames: "Frames" };
+const TAB_ICON: Record<Tab, typeof FilmIcon> = { video: FilmIcon, audio: MusicIcon, frames: ImageIcon };
 
 interface Props {
   item: MediaItem;
@@ -15,11 +21,14 @@ interface Props {
 }
 
 export function ResultCard({ item, uploader, index, total }: Props) {
-  const [tab, setTab] = useState<OptionKind>("video");
+  const [tab, setTab] = useState<Tab>("video");
   const [trimParams, setTrimParams] = useState<TrimParams | undefined>();
   const tabsId = useId();
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
-  const active = kinds.includes(tab) ? tab : kinds[0];
+  const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
+  const canExtract = !!bestVideo && (item.durationSec ?? 0) > 0;
+  const tabs: Tab[] = canExtract ? [...kinds, "frames"] : kinds;
+  const active = tabs.includes(tab) ? tab : tabs[0];
   const duration = formatDuration(item.durationSec);
   const portrait = item.width && item.height ? item.height > item.width : false;
 
@@ -59,25 +68,28 @@ export function ResultCard({ item, uploader, index, total }: Props) {
             {uploader && <p className="mt-1 truncate text-sm text-muted">by {uploader}</p>}
           </div>
 
-          {kinds.length > 1 && (
+          {tabs.length > 1 && (
             <div role="tablist" aria-label="Format" className="inline-flex w-fit rounded-full bg-surface-2 p-1">
-              {kinds.map((kind) => (
-                <button
-                  key={kind}
-                  role="tab"
-                  type="button"
-                  id={`${tabsId}-${kind}`}
-                  aria-selected={active === kind}
-                  aria-controls={`${tabsId}-panel-${kind}`}
-                  onClick={() => setTab(kind)}
-                  className={`flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-semibold transition ${
-                    active === kind ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"
-                  }`}
-                >
-                  {kind === "video" ? <FilmIcon size={15} /> : <MusicIcon size={15} />}
-                  {kind === "video" ? "Video" : "Audio"}
-                </button>
-              ))}
+              {tabs.map((kind) => {
+                const Icon = TAB_ICON[kind];
+                return (
+                  <button
+                    key={kind}
+                    role="tab"
+                    type="button"
+                    id={`${tabsId}-${kind}`}
+                    aria-selected={active === kind}
+                    aria-controls={`${tabsId}-panel-${kind}`}
+                    onClick={() => setTab(kind)}
+                    className={`flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-semibold transition sm:px-4 ${
+                      active === kind ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"
+                    }`}
+                  >
+                    <Icon size={15} />
+                    {TAB_LABEL[kind]}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -105,6 +117,19 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 ))}
             </ul>
           ))}
+
+          {canExtract && (
+            <div id={`${tabsId}-panel-frames`} role="tabpanel" aria-labelledby={`${tabsId}-frames`} hidden={active !== "frames"}>
+              <FrameExtractor
+                durationSec={item.durationSec!}
+                previewId={item.previewId}
+                source={bestVideo}
+                width={item.width}
+                height={item.height}
+                active={active === "frames"}
+              />
+            </div>
+          )}
         </div>
       </div>
     </article>
