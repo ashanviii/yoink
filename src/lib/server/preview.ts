@@ -43,6 +43,37 @@ export function registerPreviewSource(url: string, headers: Record<string, strin
   return id;
 }
 
+function headerArgs(headers: Record<string, string>): string[] {
+  const blob = Object.entries(headers)
+    .filter(([key, value]) => /^[A-Za-z0-9-]+$/.test(key) && !/[\r\n]/.test(value))
+    .map(([key, value]) => `${key}: ${value}\r\n`)
+    .join("");
+  return blob ? ["-headers", blob] : [];
+}
+
+/**
+ * Reads a video's length from its container header. Some extractors (Instagram)
+ * don't report a duration, which would hide trim and frame extraction.
+ */
+export async function probeDuration(url: string, headers: Record<string, string> = {}): Promise<number | null> {
+  const ffmpeg = ffmpegLocation();
+  if (!ffmpeg || !/^https:\/\//i.test(url)) return null;
+  try {
+    // With no output ffmpeg prints the input's metadata and exits non-zero; we only want the text.
+    const result = await run(
+      ffmpeg,
+      ["-hide_banner", "-protocol_whitelist", "https,http,tls,tcp,crypto,hls", ...headerArgs(headers), "-i", url],
+      { timeoutMs: 15_000, maxStdoutBytes: 64 * 1024 },
+    );
+    const match = /Duration: (\d+):(\d{2}):(\d{2}(?:\.\d+)?)/.exec(result.stderr);
+    if (!match) return null;
+    const sec = Number(match[1]) * 3600 + Number(match[2]) * 60 + Number(match[3]);
+    return sec > 0 ? sec : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Runs ffmpeg against the remote stream and returns the single JPEG it writes. */
 async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs: string[], timeoutMs = 30_000): Promise<Buffer> {
   const ffmpeg = ffmpegLocation();
@@ -50,11 +81,6 @@ async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs
 
   const dir = await mkdtemp(path.join(config.tmpDir ?? tmpdir(), "yoink-preview-"));
   const out = path.join(dir, "preview.jpg");
-  const headerBlob = Object.entries(source.headers)
-    .filter(([key, value]) => /^[A-Za-z0-9-]+$/.test(key) && !/[\r\n]/.test(value))
-    .map(([key, value]) => `${key}: ${value}\r\n`)
-    .join("");
-
   try {
     const result = await run(
       ffmpeg,
@@ -65,7 +91,7 @@ async function renderJpeg(source: PreviewSource, inputArgs: string[], outputArgs
         // Only network protocols: an HLS playlist must never pull in local files.
         "-protocol_whitelist",
         "https,http,tls,tcp,crypto,hls",
-        ...(headerBlob ? ["-headers", headerBlob] : []),
+        ...headerArgs(source.headers),
         ...inputArgs,
         "-i",
         source.url,

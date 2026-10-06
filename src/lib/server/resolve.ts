@@ -3,7 +3,7 @@ import { AppError } from "@/lib/errors";
 import type { MediaItem, MediaOption, ResolveResponse } from "@/lib/media-types";
 import type { ParsedMediaUrl } from "@/lib/url";
 import { config } from "./config";
-import { registerPreviewSource } from "./preview";
+import { probeDuration, registerPreviewSource } from "./preview";
 import { createDownloadToken } from "./token";
 import { classifyFailure, ytdlp } from "./ytdlp";
 import { Semaphore } from "./semaphore";
@@ -274,13 +274,36 @@ function assertDownloadable(info: RawInfo): void {
 }
 
 /** Smallest stream that still makes a legible filmstrip (≥240p when available). */
-function previewSource(info: RawInfo): string | null {
-  if (!info.duration) return null;
+function pickPreviewFormat(info: RawInfo): RawFormat | undefined {
   const candidates = formatsOf(info)
     .filter((f) => usable(f) && isSet(f.vcodec) && f.url)
     .sort((a, b) => (a.height ?? 9999) - (b.height ?? 9999));
-  const pick = candidates.find((f) => (f.height ?? 0) >= 240) ?? candidates[0];
+  return candidates.find((f) => (f.height ?? 0) >= 240) ?? candidates[0];
+}
+
+function previewSource(info: RawInfo): string | null {
+  if (!info.duration) return null;
+  const pick = pickPreviewFormat(info);
   return pick ? registerPreviewSource(pick.url!, pick.http_headers ?? undefined, info.duration) : null;
+}
+
+const MAX_PARALLEL_PROBES = 3;
+
+/**
+ * Instagram reports no duration; read it from each stream so trim and frames still work.
+ * A carousel can have 20 videos, so probe a few at a time rather than spawning 20 ffmpegs.
+ */
+async function fillDurations(entries: (RawInfo | null)[]): Promise<void> {
+  const pending = entries.filter((entry): entry is RawInfo => !!entry && !entry.duration && !entry.is_live);
+  const next = async (): Promise<void> => {
+    for (let info = pending.shift(); info; info = pending.shift()) {
+      const pick = pickPreviewFormat(info);
+      if (!pick) continue;
+      const probed = await probeDuration(pick.url!, pick.http_headers ?? info.http_headers ?? undefined);
+      if (probed) info.duration = probed;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(MAX_PARALLEL_PROBES, pending.length) }, next));
 }
 
 function toItem(info: RawInfo, ctx: BuildContext): MediaItem | null {
@@ -357,17 +380,16 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
     throw new AppError("INTERNAL", undefined, { cause });
   }
 
+  const isPlaylist = info._type === "playlist";
+  const entries = isPlaylist ? (info.entries ?? []) : [info];
+  await fillDurations(entries);
+
   const items: MediaItem[] = [];
-  if (info._type === "playlist") {
-    (info.entries ?? []).forEach((entry, index) => {
-      if (!entry) return;
-      const item = toItem(entry, { parsed, playlistIndex: index + 1 });
-      if (item) items.push(item);
-    });
-  } else {
-    const item = toItem(info, { parsed, playlistIndex: 0 });
+  entries.forEach((entry, index) => {
+    if (!entry) return;
+    const item = toItem(entry, { parsed, playlistIndex: isPlaylist ? index + 1 : 0 });
     if (item) items.push(item);
-  }
+  });
 
   if (items.length === 0) throw new AppError("NO_MEDIA");
 
