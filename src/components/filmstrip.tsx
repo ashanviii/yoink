@@ -49,13 +49,40 @@ export function frameStyle(url: string, index: number): CSSProperties {
   };
 }
 
+const SLOW_AFTER_MS = 6_000;
+
+/** True once the sprite has been loading for a while, so the UI can explain the wait. */
+function useSlow(loading: boolean): boolean {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
+    return () => {
+      clearTimeout(timer);
+      setSlow(false);
+    };
+  }, [loading]);
+  return slow;
+}
+
 /** The row of sprite tiles behind a strip's handles. */
 export function FilmstripFrames({ sprite }: { sprite: Sprite }) {
+  const slow = useSlow(sprite.status === "loading");
   const frameWidth = sprite.status === "ready" ? STRIP_HEIGHT_PX * sprite.aspect : 0;
   if (sprite.status === "loading") {
-    return <div className="grid size-full animate-pulse place-items-center bg-surface-2 text-xs text-muted">Loading frames…</div>;
+    return (
+      <div className="grid size-full animate-pulse place-items-center bg-surface-2 px-2 text-center text-xs text-muted">
+        {slow ? "Long videos take a while — you can already drag the handles" : "Loading frames…"}
+      </div>
+    );
   }
-  if (sprite.status === "error") return null;
+  if (sprite.status === "error") {
+    return (
+      <div className="grid size-full place-items-center bg-surface-2 px-2 text-center text-xs text-muted">
+        Preview unavailable — you can still drag the handles
+      </div>
+    );
+  }
   return (
     <div className="flex size-full">
       {Array.from({ length: PREVIEW_FRAMES }, (_, i) => (
