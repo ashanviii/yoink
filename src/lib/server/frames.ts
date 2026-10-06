@@ -32,8 +32,8 @@ async function ffmpeg(args: string[], options: ExtractOptions): Promise<void> {
   if (result.code !== 0) throw new AppError("INTERNAL", "ffmpeg frame extraction failed", { cause: result.stderr });
 }
 
-async function singleFrame(video: string, at: number, format: FrameFormat, options: ExtractOptions): Promise<ExtractedFrames> {
-  const out = path.join(path.dirname(video), `frame.${format}`);
+async function singleFrame(video: string, outDir: string, at: number, format: FrameFormat, options: ExtractOptions): Promise<ExtractedFrames> {
+  const out = path.join(outDir, `frame.${format}`);
   // Input seeking decodes from the previous keyframe up to `at`, so the frame is exact.
   await ffmpeg(["-ss", at.toFixed(3), "-i", video, "-map", "0:v:0", "-frames:v", "1", ...encoderArgs(format), "-y", out], options);
   if (!(await exists(out))) {
@@ -44,9 +44,8 @@ async function singleFrame(video: string, at: number, format: FrameFormat, optio
   return { filePath: out, suffix: `frame-${at.toFixed(2)}s` };
 }
 
-async function frameSet(video: string, every: number, format: FrameFormat, options: ExtractOptions): Promise<ExtractedFrames> {
-  const dir = path.dirname(video);
-  const framesDir = path.join(dir, "frames");
+async function frameSet(video: string, outDir: string, every: number, format: FrameFormat, options: ExtractOptions): Promise<ExtractedFrames> {
+  const framesDir = path.join(outDir, "frames");
   await mkdir(framesDir);
   await ffmpeg(
     [
@@ -68,7 +67,7 @@ async function frameSet(video: string, every: number, format: FrameFormat, optio
   const files = (await readdir(framesDir)).filter((name) => name.endsWith(`.${format}`)).sort();
   if (files.length === 0) throw new AppError("NO_MEDIA", "Couldn't grab any frames from that video.");
 
-  const zipPath = path.join(dir, "frames.zip");
+  const zipPath = path.join(outDir, "frames.zip");
   await writeZip(
     zipPath,
     files.map((file, index) => ({
@@ -80,13 +79,9 @@ async function frameSet(video: string, every: number, format: FrameFormat, optio
   return { filePath: zipPath, suffix: `frames-every-${every}s` };
 }
 
-/** Turns a downloaded video into the requested still(s), deleting the video afterwards. */
-export async function extractFrames(video: string, params: FrameParams, options: ExtractOptions): Promise<ExtractedFrames> {
-  try {
-    return params.mode === "single"
-      ? await singleFrame(video, params.at, params.format, options)
-      : await frameSet(video, params.every, params.format, options);
-  } finally {
-    await rm(video, { force: true }).catch(() => undefined);
-  }
+/** Writes the requested still(s) from `video` into `outDir`; the video itself is left untouched. */
+export function extractFrames(video: string, outDir: string, params: FrameParams, options: ExtractOptions): Promise<ExtractedFrames> {
+  return params.mode === "single"
+    ? singleFrame(video, outDir, params.at, params.format, options)
+    : frameSet(video, outDir, params.every, params.format, options);
 }

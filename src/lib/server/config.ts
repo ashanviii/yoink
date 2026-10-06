@@ -56,6 +56,11 @@ export const config = {
   downloadTimeoutMs: int("YOINK_DOWNLOAD_TIMEOUT_MS", 15 * 60_000),
   /** How long a prepared file stays available for download. */
   fileTtlMs: int("YOINK_FILE_TTL_MS", 10 * 60_000),
+  /**
+   * Disk budget for source videos kept so repeat frame grabs skip the download.
+   * Idle videos also expire after fileTtlMs. 0 keeps nothing (concurrent grabs still share a download).
+   */
+  frameCacheMb: int("YOINK_FRAME_CACHE_MB", 1024, { allowZero: true }),
   tokenTtlSec: int("YOINK_TOKEN_TTL_SEC", 60 * 60),
   /**
    * How to find the real client IP for per-IP rate limits. Pick one:
