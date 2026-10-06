@@ -1,0 +1,285 @@
+import { ApiError } from "@/lib/api-client";
+import { MAX_EXTRACT_FRAMES, type DownloadRecipe, type FrameFormat, type JobParams, type JobStatus, type StreamRef } from "@/lib/media-types";
+import { zipBlob } from "@/lib/zip";
+import { fetchStream, type FetchedMedia } from "./fetch-media";
+import { preloadFFmpeg, withFFmpeg, type FFmpegJob } from "./ffmpeg";
+
+/**
+ * Builds a download entirely in the browser: fetch the stream(s), then merge, trim,
+ * convert or cut frames with ffmpeg.wasm when needed. The result never touches a server.
+ */
+
+export interface BuildUpdate {
+  status: JobStatus;
+  /** 0–100, or null when unknown. */
+  progress: number | null;
+}
+
+export interface BuiltFile {
+  blob: Blob;
+  fileName: string;
+}
+
+interface BuildOptions {
+  signal: AbortSignal;
+  onUpdate: (update: BuildUpdate) => void;
+}
+
+const MIME: Record<string, string> = {
+  mp4: "video/mp4",
+  m4a: "audio/mp4",
+  mp3: "audio/mpeg",
+  jpg: "image/jpeg",
+  png: "image/png",
+  zip: "application/zip",
+};
+
+const PROCESSING_FAILED = "Something broke while processing that in your browser. Try again.";
+
+// --- source videos kept so repeat frame grabs skip the download ---
+const FRAME_CACHE_BYTES = 512 * 1024 * 1024;
+const frameSources = new Map<string, { media: Promise<FetchedMedia>; size: number; done: boolean }>();
+
+function evictFrameSources(): void {
+  let total = [...frameSources.values()].reduce((sum, entry) => sum + entry.size, 0);
+  for (const [key, entry] of frameSources) {
+    if (total <= FRAME_CACHE_BYTES || frameSources.size <= 1) break;
+    frameSources.delete(key);
+    total -= entry.size;
+  }
+}
+
+/** Shares one download per stream between frame grabs; `onWait` fires when joining one already running. */
+function frameSource(ref: StreamRef, options: { onProgress: (fraction: number | null) => void; onWait: () => void }): Promise<FetchedMedia> {
+  const cached = frameSources.get(ref.proxy);
+  if (cached) {
+    // Most recently used goes last.
+    frameSources.delete(ref.proxy);
+    frameSources.set(ref.proxy, cached);
+    // Another grab is still downloading it: wait for that one instead of fetching twice.
+    if (!cached.done) options.onWait();
+    return cached.media;
+  }
+  // Not tied to one job's signal: other grabs may be waiting on it.
+  const entry = { media: fetchStream(ref, { onProgress: options.onProgress }), size: 0, done: false };
+  frameSources.set(ref.proxy, entry);
+  entry.media.then(
+    (media) => {
+      entry.size = media.blob.size;
+      entry.done = true;
+      evictFrameSources();
+    },
+    () => frameSources.delete(ref.proxy),
+  );
+  return entry.media;
+}
+
+// --- ffmpeg recipes (same settings the server used) ---
+
+function encoderArgs(format: FrameFormat): string[] {
+  // JPEG q 2 is near-lossless. PNG is lossless at any setting; the default
+  // (no row filter) makes ~40% larger files than the "up" filter for the same CPU.
+  return format === "jpg" ? ["-q:v", "2"] : ["-pred", "up", "-compression_level", "3"];
+}
+
+function metadataArgs(meta: DownloadRecipe["meta"]): string[] {
+  const args: string[] = [];
+  if (meta.title) args.push("-metadata", `title=${meta.title}`);
+  if (meta.artist) args.push("-metadata", `artist=${meta.artist}`);
+  args.push("-metadata", `comment=${meta.url}`, "-metadata", `purl=${meta.url}`);
+  return args;
+}
+
+async function singleFrame(job: FFmpegJob, video: string, at: number, format: FrameFormat): Promise<Blob> {
+  const out = `${job.outDir}/frame.${format}`;
+  // Input seeking decodes from the previous keyframe up to `at`, so the frame is exact.
+  await job.exec(["-ss", at.toFixed(3), "-i", video, "-map", "0:v:0", "-frames:v", "1", ...encoderArgs(format), "-y", out]);
+  if (!(await job.exists(out))) {
+    // Seeking past the last frame yields nothing; fall back to the final frame.
+    await job.exec(["-sseof", "-1", "-i", video, "-map", "0:v:0", "-update", "1", ...encoderArgs(format), "-y", out]);
+  }
+  if (!(await job.exists(out))) throw new ApiError("NO_MEDIA", "Couldn't grab that frame. Try a slightly different moment.");
+  return new Blob([await job.readFile(out)], { type: MIME[format] });
+}
+
+async function frameSet(job: FFmpegJob, video: string, every: number, format: FrameFormat): Promise<Blob> {
+  await job.exec([
+    "-i",
+    video,
+    "-map",
+    "0:v:0",
+    "-vf",
+    `fps=1/${every}`,
+    "-frames:v",
+    String(MAX_EXTRACT_FRAMES),
+    ...encoderArgs(format),
+    "-y",
+    `${job.outDir}/%04d.${format}`,
+  ]);
+  const files = (await job.listDir(job.outDir)).filter((name) => name.endsWith(`.${format}`));
+  if (files.length === 0) throw new ApiError("NO_MEDIA", "Couldn't grab any frames from that video.");
+
+  const entries = [];
+  for (const [index, file] of files.entries()) {
+    entries.push({
+      name: `frame-${String(index + 1).padStart(3, "0")}_${(index * every).toFixed(2)}s.${format}`,
+      data: await job.readFile(`${job.outDir}/${file}`),
+    });
+  }
+  return zipBlob(entries);
+}
+
+function trimArgs(inputs: string[], start: number, end: number, out: string): string[] {
+  const seekInputs = inputs.flatMap((input) => ["-ss", start.toFixed(3), "-i", input]);
+  // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
+  return [
+    ...seekInputs,
+    "-t",
+    (end - start).toFixed(3),
+    "-map",
+    "0:v:0",
+    "-map",
+    inputs.length > 1 ? "1:a:0?" : "0:a:0?",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "veryfast",
+    "-crf",
+    "20",
+    "-pix_fmt",
+    "yuv420p",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-movflags",
+    "+faststart",
+    "-y",
+    out,
+  ];
+}
+
+/** A single MP4 that needs no trim is already the file: save it as fetched. */
+function savesAsIs(recipe: DownloadRecipe, fetched: FetchedMedia[], params: JobParams): boolean {
+  return recipe.mode === "video" && !params.trim && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
+}
+
+/** ffmpeg args turning the fetched inputs into the requested file. */
+function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams, out: string): string[] {
+  if (recipe.mode === "audio-mp3") {
+    return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "libmp3lame", "-q:a", "0", ...metadataArgs(recipe.meta), "-y", out];
+  }
+  if (recipe.mode === "audio-m4a") {
+    return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "copy", ...metadataArgs(recipe.meta), "-movflags", "+faststart", "-y", out];
+  }
+  if (params.trim) return trimArgs(inputs, params.trim.start, params.trim.end, out);
+  if (inputs.length > 1) {
+    return ["-i", inputs[0], "-i", inputs[1], "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", "-y", out];
+  }
+  // Remux (HLS segments, WebM, …) into MP4.
+  return ["-i", inputs[0], "-map", "0", "-dn", "-ignore_unknown", "-c", "copy", "-movflags", "+faststart", "-y", out];
+}
+
+function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): string {
+  const label = recipe.label ? `-${recipe.label}` : "";
+  let suffix = label;
+  if (params.frames) {
+    suffix = params.frames.mode === "single" ? `-frame-${params.frames.at.toFixed(2)}s` : `-frames-every-${params.frames.every}s`;
+  } else if (params.trim) {
+    suffix = `${label}-clip`;
+  }
+  return `${recipe.stem}${suffix}.${ext}`;
+}
+
+function outputExt(recipe: DownloadRecipe, params: JobParams): string {
+  if (params.frames) return params.frames.mode === "single" ? params.frames.format : "zip";
+  return recipe.mode === "audio-mp3" ? "mp3" : recipe.mode === "audio-m4a" ? "m4a" : "mp4";
+}
+
+/** Fetches every stream at once, reporting combined progress. */
+async function fetchAll(streams: StreamRef[], signal: AbortSignal, onProgress: (pct: number) => void): Promise<FetchedMedia[]> {
+  const fractions = streams.map(() => 0);
+  return Promise.all(
+    streams.map((ref, i) =>
+      fetchStream(ref, {
+        signal,
+        onProgress: (fraction) => {
+          fractions[i] = fraction ?? fractions[i];
+          onProgress((fractions.reduce((a, b) => a + b, 0) / streams.length) * 100);
+        },
+      }),
+    ),
+  );
+}
+
+export async function buildDownload(recipe: DownloadRecipe, params: JobParams, { signal, onUpdate }: BuildOptions): Promise<BuiltFile> {
+  let progress = 0;
+  let status: JobStatus = "downloading";
+  const report = (next: Partial<BuildUpdate>) => {
+    status = next.status ?? status;
+    if (next.progress !== undefined && next.progress !== null) progress = Math.max(progress, Math.min(next.progress, 99));
+    onUpdate({ status, progress });
+  };
+  const ext = outputExt(recipe, params);
+  const name = fileName(recipe, params, ext);
+
+  try {
+    // Frames only need the picture.
+    const streams = params.frames ? recipe.streams.slice(0, 1) : recipe.streams;
+    const mayProcess = !!params.frames || !!params.trim || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
+    if (mayProcess) preloadFFmpeg(); // loads while the media downloads
+
+    report({ status: "downloading", progress: 0 });
+    const fetched = params.frames
+      ? [
+          await abortableWait(
+            frameSource(streams[0], {
+              onProgress: (fraction) => status === "downloading" && report({ progress: (fraction ?? 0) * 100 }),
+              onWait: () => report({ status: "queued" }),
+            }),
+            signal,
+          ),
+        ]
+      : await fetchAll(streams, signal, (pct) => report({ progress: pct }));
+
+    const inputs = fetched.map((media, i) => ({ name: `${i === 0 ? "v" : "a"}.${media.ext}`, data: media.blob }));
+
+    let blob: Blob;
+    if (savesAsIs(recipe, fetched, params)) {
+      blob = new Blob([fetched[0].blob], { type: MIME.mp4 });
+    } else {
+      report({ status: "processing" });
+      blob = await withFFmpeg(
+        inputs,
+        async (job) => {
+          report({ status: "processing" });
+          const paths = inputs.map((input) => `${job.inputDir}/${input.name}`);
+          if (params.frames?.mode === "single") return singleFrame(job, paths[0], params.frames.at, params.frames.format);
+          if (params.frames?.mode === "interval") return frameSet(job, paths[0], params.frames.every, params.frames.format);
+          const out = `${job.outDir}/out.${ext}`;
+          await job.exec(convertArgs(recipe, paths, params, out));
+          return new Blob([await job.readFile(out)], { type: MIME[ext] });
+        },
+        { signal, onWait: () => report({ status: "queued" }) },
+      );
+    }
+
+    if (blob.size === 0) throw new ApiError("NO_MEDIA", "We couldn't find any downloadable video or audio in that link.");
+    return { blob, fileName: name };
+  } catch (err) {
+    if (signal.aborted) throw signal.reason ?? new DOMException("Aborted", "AbortError");
+    if (err instanceof ApiError) throw err;
+    console.error("[yoink] building the download failed", err);
+    const outOfMemory = err instanceof Error && /memory|OOM|allocation/i.test(`${err.message} ${String(err.cause ?? "")}`);
+    throw new ApiError("INTERNAL", outOfMemory ? "That file is too big to process in your browser. Try a lower quality." : PROCESSING_FAILED);
+  }
+}
+
+function abortableWait<T>(promise: Promise<T>, signal: AbortSignal): Promise<T> {
+  signal.throwIfAborted();
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = () => reject(signal.reason);
+    signal.addEventListener("abort", onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener("abort", onAbort));
+  });
+}

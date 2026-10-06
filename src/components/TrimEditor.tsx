@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
-import type { TrimParams } from "@/lib/media-types";
+import type { StreamRef, TrimParams } from "@/lib/media-types";
 import { FilmstripFrames, STRIP_HEIGHT_PX, clock, frameIndex, frameStyle, useSprite, type Sprite } from "./filmstrip";
 
 const MIN_CLIP_SEC = 0.5;
@@ -137,16 +137,16 @@ function TrimStrip({ sprite, start, end, duration, onChange }: StripProps) {
 
 interface Props {
   durationSec: number;
-  previewId: string | null;
+  preview: StreamRef | null;
   onTrimChange: (trim: TrimParams | undefined) => void;
 }
 
-export function TrimEditor({ durationSec, previewId, onTrimChange }: Props) {
+export function TrimEditor({ durationSec, preview, onTrimChange }: Props) {
   const id = useId();
   const [enabled, setEnabled] = useState(false);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(durationSec);
-  const sprite = useSprite(previewId, enabled);
+  const sprite = useSprite(preview, durationSec, enabled);
 
   const emit = (on: boolean, s: number, e: number) => {
     const isFullClip = s <= 0 && e >= durationSec;

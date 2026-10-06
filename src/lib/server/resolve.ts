@@ -1,10 +1,12 @@
 import "server-only";
 import { AppError } from "@/lib/errors";
-import type { MediaItem, MediaOption, ResolveResponse } from "@/lib/media-types";
+import { isDirectMediaUrl } from "@/lib/media-hosts";
+import type { MediaItem, MediaOption, OutputMode, ResolveResponse, StreamRef } from "@/lib/media-types";
 import type { ParsedMediaUrl } from "@/lib/url";
 import { config } from "./config";
-import { probeDuration, registerPreviewSource } from "./preview";
-import { createDownloadToken } from "./token";
+import { probeDuration } from "./probe";
+import { cleanSnapchatFile } from "./snapchat";
+import { mediaProxyUrl, sealMediaToken } from "./token";
 import { classifyFailure, ytdlp } from "./ytdlp";
 import { Semaphore } from "./semaphore";
 import { thumbnailProxyUrl } from "./thumbnails";
@@ -27,6 +29,9 @@ interface RawFormat {
   has_drm?: boolean | null;
   url?: string | null;
   http_headers?: Record<string, string> | null;
+  /** Cookies the CDN expects, as yt-dlp prints them ("name=value; Domain=…; Path=/"). */
+  cookies?: string | null;
+  fragments?: unknown[] | null;
 }
 
 interface RawInfo {
@@ -37,6 +42,8 @@ interface RawInfo {
   vcodec?: string | null;
   acodec?: string | null;
   http_headers?: Record<string, string> | null;
+  cookies?: string | null;
+  webpage_url?: string | null;
   title?: string | null;
   description?: string | null;
   uploader?: string | null;
@@ -55,6 +62,7 @@ const MAX_VIDEO_OPTIONS = 6;
 const MAX_CAROUSEL_ITEMS = 20;
 
 const isSet = (codec: string | null | undefined): codec is string => !!codec && codec !== "none";
+const isHls = (format: RawFormat) => /^m3u8/.test(format.protocol ?? "");
 
 /**
  * Some extractors (e.g. Snapchat Spotlight) return one direct file with no `formats`
@@ -73,12 +81,16 @@ function formatsOf(info: RawInfo): RawFormat[] {
       height: info.height || null,
       url: info.url,
       http_headers: info.http_headers,
+      cookies: info.cookies,
     },
   ];
 }
 
 function usable(format: RawFormat): boolean {
   if (format.has_drm) return false;
+  // The browser fetches whole files and HLS playlists; segmented DASH and other protocols aren't offered.
+  if (!format.url || format.fragments?.length) return false;
+  if (format.protocol && !/^(https?|m3u8|m3u8_native)$/.test(format.protocol)) return false;
   if (format.ext === "mhtml" || format.protocol === "mhtml") return false; // storyboards
   if (format.vcodec === "images") return false;
   // TikTok exposes a watermarked "download" rendition; never offer it.
@@ -128,9 +140,44 @@ function slugify(text: string): string {
   );
 }
 
+const COOKIE_ATTRIBUTES = /^(domain|path|expires|max-age|secure|httponly|samesite|priority|partitioned)$/i;
+
+/** yt-dlp's cookie dump → a Cookie request header. */
+function cookieHeader(raw: string | null | undefined): string | null {
+  const pairs = (raw ?? "")
+    .split(/;\s*/)
+    .filter((part) => part.includes("=") && !COOKIE_ATTRIBUTES.test(part.split("=")[0].trim()));
+  return pairs.length ? pairs.join("; ") : null;
+}
+
+/** Headers (cookies included) the CDN expects for this format. */
+function requestHeaders(format: RawFormat, info: RawInfo): Record<string, string> {
+  const headers: Record<string, string> = { ...info.http_headers, ...format.http_headers };
+  const cookie = cookieHeader(format.cookies ?? info.cookies) ?? headers.Cookie;
+  delete headers.Cookie;
+  if (cookie) headers.Cookie = cookie;
+  return headers;
+}
+
+/**
+ * What the browser needs to fetch one format: the CDN URL when a plain browser
+ * request can get it, and a sealed proxy URL carrying the headers for when it can't.
+ */
+function streamRef(format: RawFormat, info: RawInfo): StreamRef {
+  const url = format.url!;
+  const headers = requestHeaders(format, info);
+  const hls = isHls(format);
+  return {
+    url: !headers.Cookie && isDirectMediaUrl(url) ? url : null,
+    proxy: mediaProxyUrl(sealMediaToken({ u: url, h: headers, x: hls })),
+    hls,
+    ext: format.ext ?? "mp4",
+  };
+}
+
 interface BuildContext {
   parsed: ParsedMediaUrl;
-  playlistIndex: number;
+  uploader: string | null;
 }
 
 function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
@@ -138,16 +185,19 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
   const duration = info.duration ?? null;
   const fileStem = `${slugify(cleanTitle(info.title) ?? ctx.parsed.platform)}-${info.id}`.slice(0, 110);
 
-  const token = (selector: string, mode: "video" | "audio-mp3" | "audio-m4a", label: string) =>
-    createDownloadToken({
-      u: ctx.parsed.url,
-      p: ctx.parsed.platform,
-      f: selector,
-      m: mode,
-      i: ctx.playlistIndex,
-      l: label,
-      n: fileStem,
-    });
+  const refs = new Map<RawFormat, StreamRef>();
+  const ref = (format: RawFormat) => refs.get(format) ?? refs.set(format, streamRef(format, info)).get(format)!;
+  const recipe = (streams: RawFormat[], mode: OutputMode, label: string) => ({
+    streams: streams.map(ref),
+    mode,
+    stem: fileStem,
+    label: label === "audio" || label === "best" ? "" : label,
+    meta: {
+      title: cleanTitle(info.title),
+      artist: info.uploader ?? info.channel ?? ctx.uploader,
+      url: info.webpage_url ?? ctx.parsed.url,
+    },
+  });
 
   const audioOnly = formats
     .filter((f) => isSet(f.acodec) && f.vcodec === "none")
@@ -164,8 +214,10 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
       !current ||
       codecRank(format.vcodec) > codecRank(current.vcodec) ||
       (codecRank(format.vcodec) === codecRank(current.vcodec) &&
-        // At equal codec, prefer formats that already carry audio, then bitrate.
+        // At equal codec, prefer formats that already carry audio, then whole files
+        // (the browser can save those as-is), then bitrate.
         (Number(isSet(format.acodec)) - Number(isSet(current.acodec)) ||
+          Number(isHls(current)) - Number(isHls(format)) ||
           (format.tbr ?? 0) - (current.tbr ?? 0)) > 0);
     if (better) byResolution.set(format.height, format);
   }
@@ -182,10 +234,7 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     if (seenLabels.has(label)) continue;
     seenLabels.add(label);
 
-    const fallback = `bv*[height=${height}]+ba/b[height=${height}]`;
-    const selector = isSet(video.acodec) || !bestAudio
-      ? `${video.format_id}/${fallback}`
-      : `${video.format_id}+${bestAudio.format_id}/${fallback}`;
+    const streams = isSet(video.acodec) || !bestAudio ? [video] : [video, bestAudio];
 
     const videoSize = formatSize(video, duration);
     const audioSize = !isSet(video.acodec) && bestAudio ? formatSize(bestAudio, duration) : { bytes: 0, estimate: false };
@@ -202,7 +251,7 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     if (!anyAudio) badges.push("No audio");
 
     options.push({
-      token: token(selector, "video", label),
+      recipe: recipe(streams, "video", label),
       kind: "video",
       label,
       detail: ["MP4", codecName(video.vcodec)].filter(Boolean).join(" · "),
@@ -214,10 +263,15 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     });
   }
 
+  // yt-dlp lists formats worst to best.
+  const withVideo = formats.filter((f) => f.vcodec !== "none");
+  const bestFile = withVideo.filter((f) => f.acodec !== "none").at(-1) ?? formats.filter((f) => isSet(f.acodec)).at(-1);
+
   // Some extractors (e.g. Instagram progressive files) don't report dimensions.
-  if (options.length === 0 && formats.some((f) => f.vcodec !== "none")) {
+  if (options.length === 0 && withVideo.length > 0) {
+    const best = withVideo.at(-1)!;
     options.push({
-      token: token("bv*+ba/b", "video", "best"),
+      recipe: recipe(best.acodec === "none" && bestAudio ? [best, bestAudio] : [best], "video", "best"),
       kind: "video",
       label: "Best quality",
       detail: "MP4",
@@ -229,9 +283,10 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     });
   }
 
-  if (anyAudio) {
+  const audioSource = bestAudio ?? bestFile;
+  if (anyAudio && audioSource) {
     options.push({
-      token: token("ba/b", "audio-mp3", "audio"),
+      recipe: recipe([audioSource], "audio-mp3", "audio"),
       kind: "audio",
       label: "MP3",
       detail: "Audio only · best quality",
@@ -245,7 +300,7 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     if (bestAudio?.ext === "m4a") {
       const size = formatSize(bestAudio, duration);
       options.push({
-        token: token("ba[ext=m4a]/ba", "audio-m4a", "audio"),
+        recipe: recipe([bestAudio], "audio-m4a", "audio"),
         kind: "audio",
         label: "M4A",
         detail: `Original audio${bestAudio.abr ? ` · ${Math.round(bestAudio.abr)}kbps` : ""}`,
@@ -273,25 +328,33 @@ function assertDownloadable(info: RawInfo): void {
   }
 }
 
-/** Smallest stream that still makes a legible filmstrip (≥240p when available). */
+/**
+ * Smallest stream that still makes a legible filmstrip (≥240p when available). The
+ * browser draws it with a <video> element, so prefer what it can seek and decode
+ * everywhere: plain files over HLS, H.264 over other codecs.
+ */
 function pickPreviewFormat(info: RawInfo): RawFormat | undefined {
   const candidates = formatsOf(info)
-    .filter((f) => usable(f) && isSet(f.vcodec) && f.url)
+    .filter((f) => usable(f) && isSet(f.vcodec))
     .sort((a, b) => (a.height ?? 9999) - (b.height ?? 9999));
-  return candidates.find((f) => (f.height ?? 0) >= 240) ?? candidates[0];
+  const group =
+    [candidates.filter((f) => !isHls(f) && codecRank(f.vcodec) === 3), candidates.filter((f) => !isHls(f)), candidates].find(
+      (g) => g.length > 0,
+    ) ?? [];
+  return group.find((f) => (f.height ?? 0) >= 240) ?? group[0];
 }
 
-function previewSource(info: RawInfo): string | null {
+function previewSource(info: RawInfo): StreamRef | null {
   if (!info.duration) return null;
   const pick = pickPreviewFormat(info);
-  return pick ? registerPreviewSource(pick.url!, pick.http_headers ?? undefined, info.duration) : null;
+  return pick ? streamRef(pick, info) : null;
 }
 
 const MAX_PARALLEL_PROBES = 3;
 
 /**
- * Instagram reports no duration; read it from each stream so trim and frames still work.
- * A carousel can have 20 videos, so probe a few at a time rather than spawning 20 ffmpegs.
+ * Instagram reports no duration; read it from each stream's header so trim and
+ * frames still work. A carousel can have 20 videos, so probe a few at a time.
  */
 async function fillDurations(entries: (RawInfo | null)[]): Promise<void> {
   const pending = entries.filter((entry): entry is RawInfo => !!entry && !entry.duration && !entry.is_live);
@@ -299,7 +362,7 @@ async function fillDurations(entries: (RawInfo | null)[]): Promise<void> {
     for (let info = pending.shift(); info; info = pending.shift()) {
       const pick = pickPreviewFormat(info);
       if (!pick) continue;
-      const probed = await probeDuration(pick.url!, pick.http_headers ?? info.http_headers ?? undefined);
+      const probed = await probeDuration(pick.url!, requestHeaders(pick, info), isHls(pick));
       if (probed) info.duration = probed;
     }
   };
@@ -314,7 +377,7 @@ function toItem(info: RawInfo, ctx: BuildContext): MediaItem | null {
     id: info.id,
     title: cleanTitle(info.title) ?? "Untitled",
     thumbnail: thumbnailProxyUrl(info.thumbnail),
-    previewId: previewSource(info),
+    preview: previewSource(info),
     durationSec: info.duration ?? null,
     width: info.width || null,
     height: info.height || null,
@@ -382,14 +445,16 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
 
   const isPlaylist = info._type === "playlist";
   const entries = isPlaylist ? (info.entries ?? []) : [info];
+  if (parsed.platform === "snapchat") await Promise.all(entries.map((entry) => entry && cleanSnapchatFile(entry)));
   await fillDurations(entries);
 
+  const uploader = info.uploader ?? info.channel ?? null;
   const items: MediaItem[] = [];
-  entries.forEach((entry, index) => {
-    if (!entry) return;
-    const item = toItem(entry, { parsed, playlistIndex: isPlaylist ? index + 1 : 0 });
+  for (const entry of entries) {
+    if (!entry) continue;
+    const item = toItem(entry, { parsed, uploader });
     if (item) items.push(item);
-  });
+  }
 
   if (items.length === 0) throw new AppError("NO_MEDIA");
 
@@ -398,7 +463,7 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
     kind: parsed.kind,
     sourceUrl: parsed.url,
     title: cleanTitle(info.title) ?? items[0].title,
-    uploader: info.uploader ?? info.channel ?? null,
+    uploader,
     items,
   };
 }

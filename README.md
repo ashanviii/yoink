@@ -10,9 +10,10 @@ A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, 
 
 - **Multi-platform:** Instagram, TikTok (watermark-free), Facebook, Snapchat Spotlight, Pinterest
 - **Trim before download:** drag handles on a filmstrip of the video; only the kept range is re-encoded (frame-accurate)
-- **Extract frames:** scrub to any moment and save that exact frame as JPG/PNG at the best available quality, or grab a set (one every 0.5–60s, up to 120 frames) as a ZIP. The source video is cached briefly (`YOINK_FRAME_CACHE_MB`, default 1024), so repeat grabs skip the download
+- **Extract frames:** scrub to any moment and save that exact frame as JPG/PNG at the best available quality, or grab a set (one every 0.5–60s, up to 120 frames) as a ZIP. The source video stays in the tab's memory briefly, so repeat grabs skip the download
+- **Processed in the browser:** downloading, merging, trimming, MP3 conversion and frame extraction run client-side with ffmpeg.wasm; the server only resolves links
 - **Mobile-first UI:** Works great on phones; desktop too
-- **Security hardened:** Strict URL validation, signed download tokens, rate limiting per IP, no watermarks
+- **Security hardened:** Strict URL validation, encrypted media tokens, rate limiting per IP, no watermarks
 - **Load protected:** Concurrent request caps + smart queuing prevent resource exhaustion
 - **SEO optimized:** Platform landing pages, structured data, Open Graph cards
 - **Self-hosted:** Full control; public content only (private/login-walled content is refused)
@@ -100,11 +101,11 @@ You'll need to:
 
 ### Option 3: Manual/VPS
 
-Requires **Node 20+** (distro `nodejs` packages are often older — use NodeSource or nvm), ffmpeg and Python 3.10+.
+Requires **Node 20+** (distro `nodejs` packages are often older — use NodeSource or nvm) and Python 3.10+. No ffmpeg: media is processed in the browser.
 
 ```bash
 # System dependencies
-sudo apt-get install -y ffmpeg python3 python3-venv
+sudo apt-get install -y python3 python3-venv
 
 # yt-dlp in a virtualenv
 python3 -m venv ~/yt-dlp-env
@@ -116,8 +117,7 @@ cd yoink
 npm ci
 cp .env.example .env
 nano .env   # set YOINK_SECRET, NEXT_PUBLIC_SITE_URL, NEXT_PUBLIC_CONTACT_EMAIL,
-            # YTDLP_PATH=$HOME/yt-dlp-env/bin/yt-dlp, FFMPEG_PATH=/usr/bin/ffmpeg,
-            # YOINK_TRUSTED_PROXY_HOPS=1
+            # YTDLP_PATH=$HOME/yt-dlp-env/bin/yt-dlp, YOINK_TRUSTED_PROXY_HOPS=1
 npm run build
 
 # Run (keep it alive with systemd or PM2)
@@ -145,7 +145,6 @@ NEXT_PUBLIC_CONTACT_EMAIL=legal@yoink.example.com # For privacy page
 
 # Recommended: Tune these based on server resources
 YOINK_MAX_CONCURRENT_RESOLVES=6   # Parallel fetch operations
-YOINK_MAX_CONCURRENT_JOBS=3       # Parallel downloads
 ```
 
 ### Client IP Detection (Important!)
@@ -181,26 +180,32 @@ See `.env.example` for:
 ## 🏗️ Architecture
 
 ```
-Browser ──POST /api/resolve {url}──▶ Validate + canonicalize URL
-         (with yt-dlp extraction)     Return quality options + signed tokens
-                                      
-        ──POST /api/jobs {token}───▶ Verify token → Queue download job
-                                      (concurrency-capped)
-                                      
-        ──GET  /api/jobs/:id───────▶ Poll job status
-        ──GET  /api/jobs/:id/file──▶ Download finished file
+URL → server extracts media → browser receives media → browser processes (ffmpeg.wasm) → user saves
+
+Browser ──POST /api/resolve {url}──▶ Validate + canonicalize URL, extract with yt-dlp
+                                      Return quality options: per stream a direct CDN URL
+                                      (when browsers may read it) + an encrypted proxy URL
+
+        ──GET  <platform CDN>───────▶ Media straight from the CDN when CORS allows (Instagram/Facebook)
+        ──GET  /api/media?t=…───────▶ Otherwise a pass-through stream (Range + HLS), nothing stored
+
+        ffmpeg.wasm in the tab ─────▶ merge video+audio, remux HLS, trim, MP3/M4A, frames + ZIP
 ```
 
+The server never stores or transcodes media. ffmpeg.wasm (`@ffmpeg/core`, single-threaded) is copied
+into `public/ffmpeg/` by `scripts/copy-ffmpeg.mjs` before `dev`/`build` and served from your own domain.
+Filmstrip previews are drawn from a small rendition with a `<video>` element and a canvas.
+
 **Key security features:**
-- **Signed tokens:** Client can only download what the server offered
+- **Encrypted media tokens:** The proxy only fetches streams the server resolved; clients can't forge targets or read the upstream headers/cookies
 - **URL whitelist:** Only known platforms accepted, URLs canonicalized
 - **No shell execution:** yt-dlp spawned with array args (no injection)
 - **Load caps:** Prevents resource exhaustion; overflows get `503 BUSY`
 - **Deduplication:** Identical URLs share one extraction; cached 5 minutes
-- **Rate limiting:** Per-IP token buckets (resolve 20/min, jobs 10/min)
+- **Rate limiting:** Per-IP token buckets (resolve 20/min, media proxy 600/min)
 - **Thumbnail proxy:** Instagram/TikTok CDNs block hotlinking, so `/api/thumb` proxies images from an allowlist of CDN domains only
 
-**Storage:** All state (jobs, rate limits, cache) in process memory → **run a single instance**. To scale horizontally, move `src/lib/rate-limit.ts` and `src/lib/jobs.ts` to Redis.
+**Storage:** No media on disk. Rate limits and the resolve cache live in process memory, so per-IP limits are per instance; move `src/lib/server/rate-limit.ts` to Redis to share them. Media tokens are stateless, so any instance with the same `YOINK_SECRET` can serve `/api/media`.
 
 ---
 
@@ -215,7 +220,7 @@ npm run loadtest -- --base https://your.domain --users 50 --duration 60
 Options:
 - `--users 50` — Concurrent virtual users
 - `--duration 60` — Test duration in seconds
-- `--mode full` — Also download a file (default `resolve` = fetch only)
+- `--mode full` — Also pull a file through the media proxy (default `resolve` = fetch only)
 - `--pick smallest|best` — Which option to download in full mode (default `smallest`)
 - `--ip-header H` — Header used to give each virtual user its own IP
 
@@ -230,7 +235,7 @@ Reference results on a laptop (8 cores, home connection):
 **Tips:**
 - Real requests hit actual platforms — don't hammer them
 - If repeated links show <100ms, the cache is working ✓
-- Lots of `503 BUSY` → raise `YOINK_MAX_CONCURRENT_RESOLVES`/`YOINK_MAX_CONCURRENT_JOBS`
+- Lots of `503 BUSY` → raise `YOINK_MAX_CONCURRENT_RESOLVES`
 - `UPSTREAM_BLOCKED` → Platform rate-limiting you; add `YTDLP_PROXY`
 
 ---
@@ -273,7 +278,7 @@ docker compose restart yoink
 | --- | --- |
 | **Certificate errors in `docker compose logs caddy`** | Check DNS points to server IP; verify ports 80/443 open in firewall (Oracle has 2: security list + iptables) |
 | **"set YOINK_SECRET in .env" error** | `.env` missing required variable; run `openssl rand -base64 48` and add it |
-| **Lots of "We're at capacity" (503 BUSY)** | Raise `YOINK_MAX_CONCURRENT_RESOLVES` / `YOINK_MAX_CONCURRENT_JOBS`, then `docker compose up -d` |
+| **Lots of "We're at capacity" (503 BUSY)** | Raise `YOINK_MAX_CONCURRENT_RESOLVES`, then `docker compose up -d` |
 | **Instagram Stories return "login required"** | Need `YTDLP_COOKIES_FILE` with logged-in cookies (may violate TOS — your choice) |
 | **TikTok blocked (e.g., India)** | Set `YTDLP_PROXY=socks5://...` to proxy requests |
 | **Server keeps getting reclaimed (Oracle)** | Oracle reclaims idle Always Free instances. Upgrading to Pay-As-You-Go (still free within limits) exempts it |
@@ -284,12 +289,11 @@ docker compose restart yoink
 
 **Resource usage per operation:**
 - Fetch: ~50–100 MB RAM, a few seconds (yt-dlp process)
-- Download: CPU-heavy (ffmpeg), bandwidth (file streamed through server)
+- Download: no server CPU (processing runs in the browser); bandwidth only for CDNs that block direct browser reads (TikTok, Pinterest, Snapchat), which stream through `/api/media`
 
 **Starting point for 4 vCPU / 8 GB:**
 ```env
 YOINK_MAX_CONCURRENT_RESOLVES=10
-YOINK_MAX_CONCURRENT_JOBS=6
 ```
 
 Monitor with load testing and adjust based on memory usage.
@@ -300,14 +304,10 @@ Monitor with load testing and adjust based on memory usage.
 
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
-| POST | `/api/resolve` | Extract video/audio info from URL, return download options with signed tokens |
-| POST | `/api/jobs` | Create download job with signed token. Optional, video tokens only, one of: `trim: {start, end}` (seconds), or `frames: {mode: "single", at, format}` / `frames: {mode: "interval", every, format}` with `format` `jpg` or `png` (single image, or ZIP) |
-| GET | `/api/jobs/:id` | Poll job status (`downloading`, `processing`, `ready`) |
-| GET | `/api/jobs/:id/file` | Stream finished file (auto-deleted after `YOINK_FILE_TTL_MS`) |
+| POST | `/api/resolve` | Extract video/audio info from URL; return download options, each a recipe of streams (direct CDN URL and/or `/api/media` proxy URL) the browser fetches and processes |
+| GET | `/api/media?t=` | Pass-through stream for a resolved media file or HLS playlist (playlist URIs are rewritten to proxy URLs); forwards `Range`, stores nothing |
 | GET | `/api/thumb` | Proxy image URLs (whitelisted CDNs only) |
-| GET | `/api/preview/:id` | Filmstrip sprite (16 frames) for the trim editor and frame picker; id comes from `/api/resolve` |
-| GET | `/api/preview/:id/frame?t=` | Exact low-res frame at `t` seconds for the frame picker |
-| GET | `/api/health` | Health check (returns queue depth, load info) |
+| GET | `/api/health` | Health check (resolve queue depth, memory) |
 
 All requests are rate-limited per client IP.
 
@@ -317,7 +317,7 @@ All requests are rate-limited per client IP.
 
 - **Public content only:** Private/DRM/live content returns clear error
 - **Rate limiting:** Per-IP caps prevent abuse
-- **Signed tokens:** Can't request arbitrary downloads
+- **Encrypted media tokens:** The proxy can't be used to fetch arbitrary URLs
 - **URL validation:** Strict allowlist per platform
 - **Security headers:** CSP, `frame-ancestors 'none'`, nosniff, HSTS in production, same-origin checks on POST APIs
 - **Privacy:** See [Privacy Policy](src/app/privacy/page.tsx)
@@ -328,8 +328,10 @@ All requests are rate-limited per client IP.
 - **Instagram Stories:** most need a login. Without `YTDLP_COOKIES_FILE` they return a clear "login required" error. Supplying an account's cookies may breach Instagram's terms — operator's call.
 - **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; yoink is video only.
 - **Regional blocks:** if a platform is blocked where the server runs (e.g. TikTok in India), set `YTDLP_PROXY`.
-- **Single instance only:** jobs, rate limits and cache live in memory. Scale vertically.
-- **Serverless won't work** (e.g. Vercel functions): needs a long-running Node server with yt-dlp, ffmpeg and local disk.
+- **Per-instance limits:** rate limits and the resolve cache live in memory.
+- **Serverless won't work** (e.g. Vercel functions): needs a long-running Node server with yt-dlp.
+- **Browser memory:** files are built in the tab, so very large videos (hundreds of MB, especially with trimming) can exceed what a phone can hold; pick a lower quality there.
+- **Segmented DASH** formats (rare on these platforms) aren't offered; whole files and HLS are.
 
 ---
 
@@ -338,7 +340,7 @@ All requests are rate-limited per client IP.
 - **Next.js 16** (App Router) + React 19 + TypeScript
 - **Tailwind CSS v4** — Styling
 - **yt-dlp** — Video/audio extraction
-- **ffmpeg** — Stream merging & audio conversion
+- **ffmpeg.wasm** — In-browser merging, trimming, audio conversion & frame extraction
 - **Zod** — Input validation
 - **Vitest** — Unit tests
 

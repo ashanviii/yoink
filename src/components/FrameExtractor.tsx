@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { previewFrameUrl } from "@/lib/api-client";
-import { MAX_EXTRACT_FRAMES, type FrameFormat, type MediaOption } from "@/lib/media-types";
-import { FilmstripFrames, STRIP_HEIGHT_PX, clock, frameIndex, frameStyle, useSprite, type Sprite } from "./filmstrip";
+import { MAX_EXTRACT_FRAMES, type FrameFormat, type MediaOption, type StreamRef } from "@/lib/media-types";
+import { FilmstripFrames, STRIP_HEIGHT_PX, clock, frameIndex, frameStyle, useSprite, useStill, type Sprite } from "./filmstrip";
 import { JobRow } from "./OptionRow";
 
 const STEP_SEC = 0.1;
@@ -98,7 +97,7 @@ function Scrubber({ sprite, at, duration, onChange }: ScrubberProps) {
 
 interface PreviewProps {
   sprite: Sprite;
-  previewId: string;
+  preview: StreamRef;
   at: number;
   duration: number;
   aspect: number;
@@ -109,7 +108,7 @@ interface PreviewProps {
  * Shows the sprite tile while scrubbing, then swaps in the exact frame once the
  * playhead rests, so what you see is what you save.
  */
-function FramePreview({ sprite, previewId, at, duration, aspect, active }: PreviewProps) {
+function FramePreview({ sprite, preview, at, duration, aspect, active }: PreviewProps) {
   const [settled, setSettled] = useState(at);
   const [loaded, setLoaded] = useState<string | null>(null);
   const [failed, setFailed] = useState<string | null>(null);
@@ -119,9 +118,11 @@ function FramePreview({ sprite, previewId, at, duration, aspect, active }: Previ
     return () => clearTimeout(timer);
   }, [at]);
 
-  const url = previewFrameUrl(previewId, settled);
-  const exact = settled === at && loaded === url;
-  const pending = active && !exact && failed !== url;
+  const still = useStill(preview, settled, duration, active);
+  const current = still?.sec === settled ? still : null;
+  const url = current && "url" in current ? current.url : null;
+  const exact = settled === at && !!url && loaded === url;
+  const pending = active && !exact && !(current && "failed" in current) && !(url && failed === url);
 
   return (
     <div
@@ -133,8 +134,8 @@ function FramePreview({ sprite, previewId, at, duration, aspect, active }: Previ
       ) : sprite.status === "loading" ? (
         <div className="size-full animate-pulse bg-surface-2" />
       ) : null}
-      {active && (
-        // Same-origin preview frames; next/image adds nothing here.
+      {active && url && (
+        // Frames drawn in the browser (blob: URLs); next/image adds nothing here.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           key={url}
@@ -156,7 +157,7 @@ function FramePreview({ sprite, previewId, at, duration, aspect, active }: Previ
 
 interface Props {
   durationSec: number;
-  previewId: string | null;
+  preview: StreamRef | null;
   /** Video rendition the frames are cut from (the best one). */
   source: MediaOption;
   width: number | null;
@@ -165,9 +166,9 @@ interface Props {
   active: boolean;
 }
 
-export function FrameExtractor({ durationSec, previewId, source, width, height, active }: Props) {
+export function FrameExtractor({ durationSec, preview, source, width, height, active }: Props) {
   const id = useId();
-  const sprite = useSprite(previewId, active);
+  const sprite = useSprite(preview, durationSec, active);
   const [at, setAt] = useState(0);
   const [format, setFormat] = useState<FrameFormat>("jpg");
   const choices = intervalChoices(durationSec);
@@ -180,8 +181,8 @@ export function FrameExtractor({ durationSec, previewId, source, width, height, 
   return (
     <div className="flex flex-col gap-3">
       <div className="space-y-3 rounded-2xl border border-border bg-surface-2 p-3">
-        {previewId && sprite.status !== "error" && (
-          <FramePreview sprite={sprite} previewId={previewId} at={at} duration={durationSec} aspect={aspect} active={active} />
+        {preview && sprite.status !== "error" && (
+          <FramePreview sprite={sprite} preview={preview} at={at} duration={durationSec} aspect={aspect} active={active} />
         )}
         <div className="flex items-center gap-1">
           <button
@@ -231,7 +232,7 @@ export function FrameExtractor({ durationSec, previewId, source, width, height, 
 
       <ul className="flex flex-col gap-2">
         <JobRow
-          token={source.token}
+          recipe={source.recipe}
           params={{ frames: { mode: "single", at, format } }}
           label="This frame"
           badges={[clock(at)]}
@@ -265,7 +266,7 @@ export function FrameExtractor({ durationSec, previewId, source, width, height, 
         </div>
         <ul className="flex flex-col gap-2">
           <JobRow
-            token={source.token}
+            recipe={source.recipe}
             params={{ frames: { mode: "interval", every, format } }}
             label={`Every ${every}s`}
             badges={[`${frameCount(durationSec, every)} frames`]}

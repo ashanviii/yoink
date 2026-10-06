@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import { previewSpriteUrl } from "@/lib/api-client";
-import { PREVIEW_FRAMES } from "@/lib/media-types";
+import { getSprite, getStill } from "@/lib/client/preview";
+import { PREVIEW_FRAMES, type StreamRef } from "@/lib/media-types";
 
 /** Shared pieces of the filmstrip used by the trim editor and the frame picker. */
 
@@ -16,25 +16,46 @@ export function clock(sec: number): string {
 
 export type Sprite = { status: "loading" } | { status: "error" } | { status: "ready"; url: string; aspect: number };
 
-/** Loads the filmstrip sprite once `active` first turns true; `aspect` is a single frame's width / height. */
-export function useSprite(previewId: string | null, active: boolean): Sprite {
+/** Draws the filmstrip sprite once `active` first turns true; `aspect` is a single frame's width / height. */
+export function useSprite(preview: StreamRef | null, durationSec: number, active: boolean): Sprite {
   const [sprite, setSprite] = useState<Sprite>({ status: "loading" });
   const [requested, setRequested] = useState(false);
-  if (active && previewId && !requested) setRequested(true);
+  if (active && preview && !requested) setRequested(true);
 
   useEffect(() => {
-    if (!requested || !previewId) return;
-    const url = previewSpriteUrl(previewId);
-    const img = new Image();
-    img.onload = () => setSprite({ status: "ready", url, aspect: img.naturalWidth / PREVIEW_FRAMES / img.naturalHeight });
-    img.onerror = () => setSprite({ status: "error" });
-    img.src = url;
+    if (!requested || !preview) return;
+    let cancelled = false;
+    getSprite(preview, durationSec).then(
+      ({ url, aspect }) => !cancelled && setSprite({ status: "ready", url, aspect }),
+      () => !cancelled && setSprite({ status: "error" }),
+    );
     return () => {
-      img.onload = img.onerror = null;
+      cancelled = true;
     };
-  }, [requested, previewId]);
+  }, [requested, preview, durationSec]);
 
-  return previewId ? sprite : { status: "error" };
+  return preview ? sprite : { status: "error" };
+}
+
+export type Still = { sec: number; url: string } | { sec: number; failed: true };
+
+/** The exact frame at `sec`, drawn once `active`; null until the first one is ready. */
+export function useStill(preview: StreamRef | null, sec: number, durationSec: number, active: boolean): Still | null {
+  const [still, setStill] = useState<Still | null>(null);
+
+  useEffect(() => {
+    if (!active || !preview) return;
+    let cancelled = false;
+    getStill(preview, sec, durationSec).then(
+      (url) => !cancelled && setStill({ sec, url }),
+      () => !cancelled && setStill({ sec, failed: true }),
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [preview, sec, durationSec, active]);
+
+  return still;
 }
 
 export function frameIndex(sec: number, duration: number): number {

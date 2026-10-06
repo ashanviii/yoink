@@ -19,7 +19,7 @@ export interface RunResult {
   aborted: boolean;
 }
 
-/** Kills a process and its children (yt-dlp spawns ffmpeg). */
+/** Kills a process and its children (yt-dlp may spawn helpers). */
 export function killTree(child: ChildProcess): void {
   if (child.exitCode !== null || child.pid === undefined) return;
   if (process.platform === "win32") {

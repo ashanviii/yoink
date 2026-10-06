@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local tooling
 .claude/
+
+# ffmpeg.wasm, copied from node_modules by scripts/copy-ffmpeg.mjs
+/public/ffmpeg/

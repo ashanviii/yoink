@@ -18,6 +18,10 @@
  *                      real traffic (default x-forwarded-for). Must match the server's client-IP
  *                      config (e.g. YOINK_CLIENT_IP_HEADER) — "none" sends one shared IP.
  *
+ * Full mode pulls the option's first stream through /api/media, the only download
+ * work left on the server (processing happens in the browser). HLS streams transfer
+ * just the rewritten playlist.
+ *
  * Every fetch hits the real platforms. Keep runs short and modest: hammering YouTube
  * or Instagram from one IP can get that IP temporarily blocked by them.
  * Set YOINK_RESOLVE_CACHE_TTL_MS=0 on the server to measure uncached extraction.
@@ -70,9 +74,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // ---- metrics -----------------------------------------------------------------
 const metrics = {
   resolve: { latencies: [], statuses: {}, codes: {} },
-  job: { latencies: [], statuses: {}, codes: {} },
   download: { latencies: [], statuses: {}, codes: {}, bytes: 0 },
-  peak: { resolvesActive: 0, resolvesQueued: 0, jobsRunning: 0, jobsQueued: 0, memoryMb: 0 },
+  peak: { resolvesActive: 0, resolvesQueued: 0, memoryMb: 0 },
 };
 
 function record(bucket, ms, status, code) {
@@ -113,29 +116,14 @@ function chooseOption(media) {
 
 async function fullDownload(media, ip) {
   const option = chooseOption(media);
-  if (!option) return;
+  const stream = option?.recipe?.streams?.[0];
+  if (!stream) return;
   const started = performance.now();
-  const created = await call("/api/jobs", ip, { method: "POST", body: JSON.stringify({ token: option.token }) });
-  if (created.status !== 202) {
-    record("job", created.ms, created.status, created.body?.error?.code);
-    return;
-  }
-  let state = created.body;
-  while (state && state.status !== "ready" && state.status !== "error") {
-    await sleep(800);
-    const polled = await call(`/api/jobs/${state.id}`, ip);
-    state = polled.body;
-    if (polled.status !== 200) break;
-  }
-  record("job", performance.now() - started, state?.status ?? "lost", state?.error?.code);
-  if (state?.status !== "ready") return;
-
-  const dlStarted = performance.now();
-  const file = await call(`/api/jobs/${state.id}/file`, ip);
+  const file = await call(stream.proxy, ip);
   let bytes = 0;
-  if (file.res?.body) for await (const chunk of file.res.body) bytes += chunk.length;
+  if (file.res?.body && !file.body) for await (const chunk of file.res.body) bytes += chunk.length;
   metrics.download.bytes += bytes;
-  record("download", performance.now() - dlStarted, file.status, file.body?.error?.code);
+  record("download", performance.now() - started, file.status, file.body?.error?.code);
 }
 
 async function virtualUser(index, stopAt) {
@@ -160,8 +148,6 @@ async function sampleHealth() {
   const p = metrics.peak;
   p.resolvesActive = Math.max(p.resolvesActive, h.resolves.active);
   p.resolvesQueued = Math.max(p.resolvesQueued, h.resolves.queued);
-  p.jobsRunning = Math.max(p.jobsRunning, h.jobs.running);
-  p.jobsQueued = Math.max(p.jobsQueued, h.jobs.queued);
   p.memoryMb = Math.max(p.memoryMb, h.memoryMb);
   return h;
 }
@@ -170,7 +156,7 @@ function summary(name, m) {
   const total = m.latencies.length;
   if (!total) return `${name}: no requests`;
   const ok = Object.entries(m.statuses)
-    .filter(([s]) => s === "200" || s === "202" || s === "ready")
+    .filter(([s]) => s === "200" || s === "206")
     .reduce((n, [, c]) => n + c, 0);
   const lines = [
     `${name}: ${total} total, ${((ok / total) * 100).toFixed(1)}% ok`,
@@ -191,7 +177,7 @@ async function main() {
   console.log(
     `yoink load test → ${opts.base}\n` +
       `${opts.users} users · ${opts.duration}s · ramp ${opts.ramp}s · mode ${opts.mode} · ${opts.urlList.length} links\n` +
-      `server caps: resolves ${health.resolves.max} (+${health.resolves.maxQueue} queued), jobs ${health.jobs.max} (+${health.jobs.maxQueue} queued)\n`,
+      `server caps: resolves ${health.resolves.max} (+${health.resolves.maxQueue} queued)\n`,
   );
 
   const startedAt = Date.now();
@@ -211,7 +197,7 @@ async function main() {
     const elapsed = Math.round((Date.now() - startedAt) / 1000);
     console.log(
       `[${String(elapsed).padStart(3)}s] users ${users.length}  resolves ${r.latencies.length} (p90 ${fmtMs(pct(r.latencies.slice(-200), 90))})` +
-        (h ? `  server: resolving ${h.resolves.active}/${h.resolves.max} queued ${h.resolves.queued}  jobs ${h.jobs.running} queued ${h.jobs.queued}  rss ${h.memoryMb}MB` : "  server: health check failed"),
+        (h ? `  server: resolving ${h.resolves.active}/${h.resolves.max} queued ${h.resolves.queued}  rss ${h.memoryMb}MB` : "  server: health check failed"),
     );
   }, 5000);
 
@@ -224,13 +210,12 @@ async function main() {
   console.log(`\n=== results (${seconds.toFixed(0)}s) ===`);
   console.log(summary("resolve", metrics.resolve));
   if (opts.mode === "full") {
-    console.log(summary("download job (start→ready)", metrics.job));
-    console.log(summary("file transfer", metrics.download));
+    console.log(summary("proxied transfer", metrics.download));
     console.log(`  transferred ${(metrics.download.bytes / 1048576).toFixed(1)} MB`);
   }
   console.log(`throughput: ${(metrics.resolve.latencies.length / seconds).toFixed(2)} resolves/s`);
   console.log(
-    `server peaks: resolving ${p.resolvesActive} · resolve queue ${p.resolvesQueued} · jobs ${p.jobsRunning} · job queue ${p.jobsQueued} · rss ${p.memoryMb}MB`,
+    `server peaks: resolving ${p.resolvesActive} · resolve queue ${p.resolvesQueued} · rss ${p.memoryMb}MB`,
   );
 }
 

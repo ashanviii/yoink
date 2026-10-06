@@ -6,7 +6,6 @@ ENV NEXT_TELEMETRY_DISABLED=1
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-# ffmpeg comes from apt in the runtime image, so skip ffmpeg-static's binary download.
 RUN npm ci --ignore-scripts
 
 FROM base AS build
@@ -25,10 +24,10 @@ WORKDIR /app
 ENV NODE_ENV=production \
     PORT=3000 \
     HOSTNAME=0.0.0.0 \
-    FFMPEG_PATH=/usr/bin/ffmpeg \
     YTDLP_PATH=/opt/yt-dlp/bin/yt-dlp
+# No ffmpeg: media is processed in the browser (ffmpeg.wasm, copied into public/ by the build).
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ffmpeg python3 python3-venv ca-certificates \
+ && apt-get install -y --no-install-recommends python3 python3-venv ca-certificates \
  && python3 -m venv /opt/yt-dlp \
  && /opt/yt-dlp/bin/pip install --no-cache-dir "yt-dlp[default,curl-cffi]" \
  # Owned by the app user so the entrypoint can self-update yt-dlp on start.

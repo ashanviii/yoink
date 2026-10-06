@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBytes } from "@/lib/format";
-import type { JobParams, MediaOption, TrimParams } from "@/lib/media-types";
+import type { DownloadRecipe, JobParams, MediaOption, TrimParams } from "@/lib/media-types";
 import { AlertIcon, CheckIcon, DownloadIcon, RetryIcon } from "./icons";
 import { useDownloadJob } from "./useDownloadJob";
 
@@ -12,7 +12,7 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 interface JobRowProps {
-  token: string;
+  recipe: DownloadRecipe;
   params?: JobParams;
   label: string;
   /** Text on the download button, e.g. "MP4". */
@@ -25,9 +25,9 @@ interface JobRowProps {
   processingLabel?: string;
 }
 
-/** One downloadable thing: runs a job on click and shows its progress inline. */
-export function JobRow({ token, params, label, action, detail, badges = [], best, sizeBytes = null, sizeIsEstimate = false, processingLabel }: JobRowProps) {
-  const { state, start, saveAgain } = useDownloadJob(token, params);
+/** One downloadable thing: builds it in the browser on click and shows its progress inline. */
+export function JobRow({ recipe, params, label, action, detail, badges = [], best, sizeBytes = null, sizeIsEstimate = false, processingLabel }: JobRowProps) {
+  const { state, start, saveAgain } = useDownloadJob(recipe, params);
   const busy = state.phase === "starting" || state.phase === "working";
   const progress = state.job?.progress ?? 0;
   const size = formatBytes(state.job?.sizeBytes ?? sizeBytes, state.job?.sizeBytes ? false : sizeIsEstimate);
@@ -105,7 +105,7 @@ export function JobRow({ token, params, label, action, detail, badges = [], best
 export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimParams }) {
   return (
     <JobRow
-      token={option.token}
+      recipe={option.recipe}
       params={trim ? { trim } : undefined}
       label={option.label}
       action={option.ext.toUpperCase()}

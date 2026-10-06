@@ -1,16 +1,19 @@
 import type { NextConfig } from "next";
+import { DIRECT_MEDIA_CSP } from "./src/lib/media-hosts";
 
 const isDev = process.env.NODE_ENV !== "production";
 
 const csp = [
   "default-src 'self'",
   // Next.js injects inline bootstrap scripts; dev mode also needs eval for HMR.
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  // ffmpeg.wasm needs to compile WebAssembly.
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  `connect-src 'self'${isDev ? " ws: wss:" : ""}`,
-  "media-src 'self'",
+  // Media is fetched straight from these CDNs when they allow it (else via /api/media).
+  `connect-src 'self' ${DIRECT_MEDIA_CSP}${isDev ? " ws: wss:" : ""}`,
+  `media-src 'self' blob: ${DIRECT_MEDIA_CSP}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -20,8 +23,6 @@ const csp = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  // ffmpeg-static resolves its binary path at runtime; keep it out of the bundle.
-  serverExternalPackages: ["ffmpeg-static"],
   async headers() {
     return [
       {

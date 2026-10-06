@@ -99,8 +99,6 @@ NEXT_PUBLIC_CONTACT_EMAIL=you@example.com
 # Tuned for 4 OCPU / 24 GB. Halve these on 2 OCPU / 12 GB.
 YOINK_MAX_CONCURRENT_RESOLVES=12
 YOINK_MAX_QUEUED_RESOLVES=200
-YOINK_MAX_CONCURRENT_JOBS=6
-YOINK_MAX_QUEUED_JOBS=50
 ```
 
 Leave `YOINK_CLIENT_IP_HEADER` / `YOINK_TRUSTED_PROXY_HOPS` alone. `docker-compose.yml` already sets them correctly for Caddy.
@@ -154,5 +152,5 @@ Watch the error breakdown. Lots of `BUSY` means raise the concurrency settings (
 - **Site doesn't load / certificate errors in `docker compose logs caddy`:** DNS must point to the server (check DuckDNS shows the right IP), and ports 80/443 must be open in **both** the Oracle security list and iptables (steps 3 and 5).
 - **`set YOINK_SECRET in .env` error on startup:** `.env` is missing a required value.
 - **YouTube says "temporarily blocking our requests":** YouTube is challenging the server's datacenter IP. Instagram/Pinterest/TikTok keep working. Fixes: wait it out, or set `YTDLP_PROXY` to a residential proxy.
-- **Lots of "We're at capacity":** raise `YOINK_MAX_CONCURRENT_RESOLVES` / `YOINK_MAX_CONCURRENT_JOBS`, then `docker compose up -d`. Watch memory with `free -h`.
+- **Lots of "We're at capacity":** raise `YOINK_MAX_CONCURRENT_RESOLVES`, then `docker compose up -d`. Watch memory with `free -h`.
 - **Oracle reclaimed the server:** Oracle may reclaim Always Free instances that sit nearly idle for a week. Real traffic prevents this. Upgrading the account to Pay-As-You-Go (still free within Always Free limits) also exempts it.

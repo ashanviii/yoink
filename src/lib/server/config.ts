@@ -19,7 +19,7 @@ function resolveSecret(): string {
     return secret;
   }
   if (process.env.NODE_ENV === "production" && process.env.NEXT_PHASE !== "phase-production-build") {
-    throw new Error("YOINK_SECRET is required in production (used to sign download tokens).");
+    throw new Error("YOINK_SECRET is required in production (used to seal media tokens).");
   }
   return "dev-only-insecure-secret-change-me-please-0000";
 }
@@ -33,14 +33,10 @@ export const config = {
   },
   /** Explicit yt-dlp executable. If unset we try `yt-dlp`, then `python -m yt_dlp`. */
   ytdlpPath: str("YTDLP_PATH"),
-  /** Explicit ffmpeg executable. Defaults to the bundled ffmpeg-static binary. */
-  ffmpegPath: str("FFMPEG_PATH"),
   /** Optional outbound proxy for the extractor (e.g. if a platform is blocked in your region). */
   proxy: str("YTDLP_PROXY"),
   /** Optional Netscape cookies file. Only needed for login-walled content such as Instagram Stories. */
   cookiesFile: str("YTDLP_COOKIES_FILE"),
-  /** Directory for temporary download files. Defaults to the OS temp dir. */
-  tmpDir: str("YOINK_TMP_DIR"),
   maxFileSizeMb: int("YOINK_MAX_FILESIZE_MB", 2048),
   maxDurationSec: int("YOINK_MAX_DURATION_SEC", 3 * 60 * 60),
   /** Each resolve is a short-lived yt-dlp process (~50–100 MB RAM). */
@@ -48,19 +44,10 @@ export const config = {
   maxQueuedResolves: int("YOINK_MAX_QUEUED_RESOLVES", 100),
   /** How long a resolve may wait in the queue before the user gets a "busy" error. */
   resolveQueueWaitMs: int("YOINK_RESOLVE_QUEUE_WAIT_MS", 30_000),
-  maxConcurrentJobs: int("YOINK_MAX_CONCURRENT_JOBS", 3),
-  maxQueuedJobs: int("YOINK_MAX_QUEUED_JOBS", 20),
   /** Cache resolved links this long (identical links from many users cost one yt-dlp run). 0 disables. */
   resolveCacheTtlMs: int("YOINK_RESOLVE_CACHE_TTL_MS", 5 * 60_000, { allowZero: true }),
   resolveTimeoutMs: int("YOINK_RESOLVE_TIMEOUT_MS", 45_000),
-  downloadTimeoutMs: int("YOINK_DOWNLOAD_TIMEOUT_MS", 15 * 60_000),
-  /** How long a prepared file stays available for download. */
-  fileTtlMs: int("YOINK_FILE_TTL_MS", 10 * 60_000),
-  /**
-   * Disk budget for source videos kept so repeat frame grabs skip the download.
-   * Idle videos also expire after fileTtlMs. 0 keeps nothing (concurrent grabs still share a download).
-   */
-  frameCacheMb: int("YOINK_FRAME_CACHE_MB", 1024, { allowZero: true }),
+  /** How long the media proxy honours a resolved stream. */
   tokenTtlSec: int("YOINK_TOKEN_TTL_SEC", 60 * 60),
   /**
    * How to find the real client IP for per-IP rate limits. Pick one:

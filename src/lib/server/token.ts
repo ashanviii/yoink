@@ -1,64 +1,60 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "@/lib/errors";
-import { PLATFORMS, type PlatformId } from "@/lib/platforms";
 import { config } from "./config";
 
 /**
- * Everything the download worker needs, signed so clients can only request
- * options we offered — never arbitrary URLs or yt-dlp format expressions.
+ * A media stream the /api/media proxy may fetch, sealed (AES-256-GCM) so clients
+ * can neither forge targets — the proxy is never an open relay — nor read the
+ * upstream headers, which can carry cookies.
  */
 const payloadSchema = z.object({
-  /** canonical source URL */
+  /** upstream https URL */
   u: z.string().url(),
-  /** platform id */
-  p: z.enum(Object.keys(PLATFORMS) as [PlatformId, ...PlatformId[]]),
-  /** yt-dlp format selector */
-  f: z.string().min(1).max(512),
-  /** output mode */
-  m: z.enum(["video", "audio-mp3", "audio-m4a"]),
-  /** playlist item (1-based) for carousels, 0 = single */
-  i: z.number().int().min(0).max(50),
-  /** human label used in the filename, e.g. "1080p" */
-  l: z.string().max(40),
-  /** media id + title for the filename */
-  n: z.string().max(120),
+  /** request headers the CDN expects (User-Agent, Referer, Cookie, …) */
+  h: z.record(z.string(), z.string()),
+  /** HLS playlist: the proxy rewrites its URIs to sealed proxy URLs */
+  x: z.boolean(),
   /** expiry, unix seconds */
   e: z.number().int(),
 });
 
-export type DownloadTokenPayload = z.infer<typeof payloadSchema>;
+export type MediaTokenPayload = z.infer<typeof payloadSchema>;
 
-function sign(data: string): string {
-  return createHmac("sha256", config.secret).update(data).digest("base64url");
+let keyCache: Buffer | undefined;
+function key(): Buffer {
+  keyCache ??= createHash("sha256").update(`yoink-media-token:${config.secret}`).digest();
+  return keyCache;
 }
 
-export function createDownloadToken(payload: Omit<DownloadTokenPayload, "e">): string {
-  const full: DownloadTokenPayload = { ...payload, e: Math.floor(Date.now() / 1000) + config.tokenTtlSec };
-  const data = Buffer.from(JSON.stringify(full)).toString("base64url");
-  return `${data}.${sign(data)}`;
+export function sealMediaToken(payload: Omit<MediaTokenPayload, "e">, expiresAt?: number): string {
+  const full: MediaTokenPayload = { ...payload, e: expiresAt ?? Math.floor(Date.now() / 1000) + config.tokenTtlSec };
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", key(), iv);
+  const body = Buffer.concat([cipher.update(JSON.stringify(full), "utf8"), cipher.final()]);
+  return Buffer.concat([iv, cipher.getAuthTag(), body]).toString("base64url");
 }
 
-export function verifyDownloadToken(token: unknown): DownloadTokenPayload {
-  if (typeof token !== "string" || token.length > 4096) throw new AppError("BAD_REQUEST", "Invalid download token.");
-  const [data, signature] = token.split(".");
-  if (!data || !signature) throw new AppError("BAD_REQUEST", "Invalid download token.");
-
-  const expected = Buffer.from(sign(data));
-  const actual = Buffer.from(signature);
-  if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
-    throw new AppError("BAD_REQUEST", "Invalid download token.");
+export function openMediaToken(token: unknown): MediaTokenPayload {
+  if (typeof token !== "string" || token.length < 40 || token.length > 8192) {
+    throw new AppError("BAD_REQUEST", "Invalid media token.");
   }
-
   let parsed: unknown;
   try {
-    parsed = JSON.parse(Buffer.from(data, "base64url").toString("utf8"));
+    const raw = Buffer.from(token, "base64url");
+    const decipher = createDecipheriv("aes-256-gcm", key(), raw.subarray(0, 12));
+    decipher.setAuthTag(raw.subarray(12, 28));
+    parsed = JSON.parse(Buffer.concat([decipher.update(raw.subarray(28)), decipher.final()]).toString("utf8"));
   } catch {
-    throw new AppError("BAD_REQUEST", "Invalid download token.");
+    throw new AppError("BAD_REQUEST", "Invalid media token.");
   }
   const result = payloadSchema.safeParse(parsed);
-  if (!result.success) throw new AppError("BAD_REQUEST", "Invalid download token.");
+  if (!result.success) throw new AppError("BAD_REQUEST", "Invalid media token.");
   if (result.data.e < Date.now() / 1000) throw new AppError("EXPIRED");
   return result.data;
+}
+
+export function mediaProxyUrl(token: string): string {
+  return `/api/media?t=${token}`;
 }

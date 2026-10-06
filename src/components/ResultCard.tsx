@@ -96,7 +96,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
           {/* Trim editor for video only */}
           {kinds.includes("video") && (item.durationSec ?? 0) > 1 && (
             <div hidden={active !== "video"}>
-              <TrimEditor durationSec={item.durationSec!} previewId={item.previewId} onTrimChange={setTrimParams} />
+              <TrimEditor durationSec={item.durationSec!} preview={item.preview} onTrimChange={setTrimParams} />
             </div>
           )}
 
@@ -113,7 +113,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
               {item.options
                 .filter((o) => o.kind === kind)
                 .map((option) => (
-                  <OptionRow key={option.token} option={option} trim={kind === "video" ? trimParams : undefined} />
+                  <OptionRow key={`${option.kind}-${option.label}`} option={option} trim={kind === "video" ? trimParams : undefined} />
                 ))}
             </ul>
           ))}
@@ -122,7 +122,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
             <div id={`${tabsId}-panel-frames`} role="tabpanel" aria-labelledby={`${tabsId}-frames`} hidden={active !== "frames"}>
               <FrameExtractor
                 durationSec={item.durationSec!}
-                previewId={item.previewId}
+                preview={item.preview}
                 source={bestVideo}
                 width={item.width}
                 height={item.height}

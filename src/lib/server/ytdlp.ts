@@ -1,5 +1,4 @@
 import "server-only";
-import ffmpegStatic from "ffmpeg-static";
 import { AppError } from "@/lib/errors";
 import { config } from "./config";
 import { run, type RunOptions, type RunResult } from "./process";
@@ -40,10 +39,6 @@ function getCommand(): Promise<Command> {
   return commandPromise;
 }
 
-export function ffmpegLocation(): string | null {
-  return config.ffmpegPath ?? ffmpegStatic ?? null;
-}
-
 /** Flags applied to every invocation. User input never reaches these. */
 function baseArgs(): string[] {
   const args = [
@@ -61,8 +56,6 @@ function baseArgs(): string[] {
     "--js-runtimes",
     `node:${process.execPath}`,
   ];
-  const ffmpeg = ffmpegLocation();
-  if (ffmpeg) args.push("--ffmpeg-location", ffmpeg);
   if (config.proxy) args.push("--proxy", config.proxy);
   if (config.cookiesFile) args.push("--cookies", config.cookiesFile);
   return args;

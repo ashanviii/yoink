@@ -1,6 +1,4 @@
 import "server-only";
-import { config } from "./config";
-import { ytdlp } from "./ytdlp";
 
 /**
  * Snapchat's web player serves Spotlight's "share" rendition (variant 27), which has the
@@ -27,18 +25,11 @@ async function isVideo(url: string): Promise<boolean> {
   }
 }
 
-/** Direct URL of the watermark-free file, or the page URL when no clean variant exists. */
-export async function snapchatDownloadSource(pageUrl: string): Promise<string> {
-  const result = await ytdlp(["--dump-single-json", "--skip-download", "--no-playlist"], pageUrl, {
-    timeoutMs: config.resolveTimeoutMs,
-    maxStdoutBytes: 4 * 1024 * 1024,
-  });
-  if (result.code !== 0) return pageUrl;
-  try {
-    const info = JSON.parse(result.stdout) as { url?: string };
-    const clean = info.url ? cleanSnapchatMediaUrl(info.url) : null;
-    return clean && (await isVideo(clean)) ? clean : pageUrl;
-  } catch {
-    return pageUrl;
-  }
+/** Points the extracted info at the watermark-free file when one exists. */
+export async function cleanSnapchatFile(info: { url?: string | null; formats?: { url?: string | null }[] }): Promise<void> {
+  const original = info.url;
+  const clean = original ? cleanSnapchatMediaUrl(original) : null;
+  if (!clean || !(await isVideo(clean))) return;
+  info.url = clean;
+  for (const format of info.formats ?? []) if (format.url === original) format.url = clean;
 }
