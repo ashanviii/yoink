@@ -159,6 +159,17 @@ async function playlistDuration(url: string, headers: Record<string, string>, de
   return total > 0 ? total : null;
 }
 
+/** False only when the CDN answered with an error; network failures and timeouts count as reachable. */
+export async function probeReachable(url: string, headers: Record<string, string>): Promise<boolean> {
+  try {
+    const response = await fetch(url, { headers: { ...headers, Range: "bytes=0-0" }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    await response.body?.cancel();
+    return response.ok;
+  } catch {
+    return true;
+  }
+}
+
 export async function probeDuration(url: string, headers: Record<string, string>, hls: boolean): Promise<number | null> {
   if (!/^https:\/\//i.test(url)) return null;
   try {

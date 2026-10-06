@@ -4,7 +4,7 @@ import { isDirectMediaUrl } from "@/lib/media-hosts";
 import type { MediaItem, MediaOption, OutputMode, ResolveResponse, StreamRef } from "@/lib/media-types";
 import type { ParsedMediaUrl } from "@/lib/url";
 import { config } from "./config";
-import { probeDuration } from "./probe";
+import { probeDuration, probeReachable } from "./probe";
 import { cleanSnapchatFile } from "./snapchat";
 import { mediaProxyUrl, sealMediaToken } from "./token";
 import { classifyFailure, ytdlp } from "./ytdlp";
@@ -369,6 +369,25 @@ async function fillDurations(entries: (RawInfo | null)[]): Promise<void> {
   await Promise.all(Array.from({ length: Math.min(MAX_PARALLEL_PROBES, pending.length) }, next));
 }
 
+/**
+ * TikTok's audio-only format is the post's "sound", which can be a whole song rather than
+ * the clip's audio, so only renditions carrying both video and audio are kept (audio
+ * downloads are then cut from the video file). yt-dlp also flags some
+ * renditions (notably bytevc1/HEVC) as "needs testing" because their URLs often 404, but
+ * only tests them when it downloads — and --dump-single-json strips the flag. The browser
+ * fetches these URLs itself, so test them here.
+ */
+async function pruneTikTokFormats(entries: (RawInfo | null)[]): Promise<void> {
+  await Promise.all(
+    entries.map(async (info) => {
+      if (!info?.formats?.length) return;
+      const candidates = info.formats.filter((f) => usable(f) && isSet(f.vcodec) && isSet(f.acodec));
+      const alive = await Promise.all(candidates.map((f) => probeReachable(f.url!, requestHeaders(f, info))));
+      info.formats = candidates.filter((_, i) => alive[i]);
+    }),
+  );
+}
+
 function toItem(info: RawInfo, ctx: BuildContext): MediaItem | null {
   assertDownloadable(info);
   const options = buildOptions(info, ctx);
@@ -446,6 +465,7 @@ async function fetchInfo(parsed: ParsedMediaUrl): Promise<ResolveResponse> {
   const isPlaylist = info._type === "playlist";
   const entries = isPlaylist ? (info.entries ?? []) : [info];
   if (parsed.platform === "snapchat") await Promise.all(entries.map((entry) => entry && cleanSnapchatFile(entry)));
+  if (parsed.platform === "tiktok") await pruneTikTokFormats(entries);
   await fillDurations(entries);
 
   const uploader = info.uploader ?? info.channel ?? null;
