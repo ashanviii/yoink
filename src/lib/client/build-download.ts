@@ -1,5 +1,5 @@
 import { ApiError } from "@/lib/api-client";
-import { MAX_EXTRACT_FRAMES, type CropParams, type DownloadRecipe, type FrameFormat, type JobParams, type JobStatus, type StreamRef } from "@/lib/media-types";
+import { GIF_FPS, GIF_SIZE, MAX_EXTRACT_FRAMES, type CropParams, type DownloadRecipe, type FrameFormat, type JobParams, type JobStatus, type StreamRef } from "@/lib/media-types";
 import { zipBlob } from "@/lib/zip";
 import { fetchStream, type FetchedMedia } from "./fetch-media";
 import { preloadFFmpeg, withFFmpeg, type FFmpegJob } from "./ffmpeg";
@@ -27,6 +27,8 @@ interface BuildOptions {
 
 const MIME: Record<string, string> = {
   mp4: "video/mp4",
+  webm: "video/webm",
+  gif: "image/gif",
   m4a: "audio/mp4",
   mp3: "audio/mpeg",
   jpg: "image/jpeg",
@@ -145,31 +147,104 @@ function cropFilter({ x, y, w, h, ratio }: CropParams): string {
 const ROTATE_FILTER = { 90: "transpose=clock", 180: "hflip,vflip", 270: "transpose=cclock" } as const;
 const FLIP_FILTER = { horizontal: "hflip", vertical: "vflip" } as const;
 
-/** Re-encodes the video with the chosen trim, crop, flip, rotation, speed and volume. */
-function editArgs(inputs: string[], params: JobParams, out: string): string[] {
-  const { trim, crop, speed, rotate, flip, volume } = params;
-  // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
-  // The range is read as input options, so it stays in source time whatever the speed.
-  const range = trim ? ["-ss", trim.start.toFixed(3), "-t", (trim.end - trim.start).toFixed(3)] : [];
-  // Crop first: the crop box is drawn on the untransformed frame. Flip before rotating, as the preview shows it.
-  const video = [crop && cropFilter(crop), flip && FLIP_FILTER[flip], rotate && ROTATE_FILTER[rotate], speed && `setpts=PTS/${speed}`]
-    .filter(Boolean)
-    .join(",");
-  // atempo keeps the pitch. Audio filters are ignored when the video has no sound.
-  const audio = [speed && `atempo=${speed}`, volume && `volume=${volume}`].filter(Boolean).join(",");
-  const muted = volume === 0;
-  // A volume-only edit leaves the picture alone, so it's copied instead of re-encoded (much faster).
-  const videoCodec = video || trim ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"] : ["-c:v", "copy"];
+/**
+ * Trimming jumps (fast input seek) to this long before the clip, then cuts exactly with trim filters.
+ * Seeking straight to the start isn't reliable: some platforms' files carry offset timestamps, and the
+ * seek lands a keyframe late, losing the clip's first second or two of picture.
+ */
+const SEEK_MARGIN_SEC = 10;
+
+function seekPoint({ trim }: JobParams): number {
+  return trim ? Math.max(0, trim.start - SEEK_MARGIN_SEC) : 0;
+}
+
+function seekArgs(params: JobParams): string[] {
+  const at = seekPoint(params);
+  return at > 0 ? ["-ss", at.toFixed(3)] : [];
+}
+
+/** Keeps exactly the trimmed range (timed from the seek point) and restarts timestamps at zero. */
+function trimFilter(params: JobParams, kind: "video" | "audio"): string | undefined {
+  const { trim } = params;
+  if (!trim) return undefined;
+  const [cut, reset] = kind === "video" ? ["trim", "setpts"] : ["atrim", "asetpts"];
+  return `${cut}=start=${(trim.start - seekPoint(params)).toFixed(3)}:duration=${(trim.end - trim.start).toFixed(3)},${reset}=PTS-STARTPTS`;
+}
+
+/** The picture edits, in order: the crop box is drawn on the untransformed frame, and flip comes before rotate as the preview shows it. */
+function videoFilters(params: JobParams): string[] {
+  const { crop, flip, rotate, speed } = params;
   return [
-    ...inputs.flatMap((input) => [...range, "-i", input]),
+    trimFilter(params, "video"),
+    crop && cropFilter(crop),
+    flip && FLIP_FILTER[flip],
+    rotate && ROTATE_FILTER[rotate],
+    speed && `setpts=PTS/${speed}`,
+  ].filter((f): f is string => !!f);
+}
+
+/** The sound edits: atempo changes speed without changing pitch. */
+function audioFilters(params: JobParams): string[] {
+  const { speed, volume } = params;
+  return [trimFilter(params, "audio"), speed && `atempo=${speed}`, volume && `volume=${volume}`].filter((f): f is string => !!f);
+}
+
+const CODECS = {
+  mp4: {
+    video: ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"],
+    audio: ["-c:a", "aac", "-b:a", "192k"],
+    extra: ["-movflags", "+faststart"],
+  },
+  // VP8 at libvpx's fastest settings: VP9 is far too slow to encode in a browser.
+  webm: {
+    video: ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-crf", "10", "-b:v", "3M", "-pix_fmt", "yuv420p"],
+    audio: ["-c:a", "libopus", "-b:a", "128k"],
+    extra: [],
+  },
+} as const;
+
+/** Re-encodes the video with the chosen trim, crop, flip, rotation, speed and volume, as MP4 or WebM. */
+function editArgs(inputs: string[], params: JobParams, out: string, container: keyof typeof CODECS): string[] {
+  const video = videoFilters(params).join(",");
+  // Audio filters are ignored when the video has no sound.
+  const audio = audioFilters(params).join(",");
+  const muted = params.volume === 0;
+  const codecs = CODECS[container];
+  // A volume-only MP4 edit leaves the picture alone, so it's copied instead of re-encoded (much faster).
+  const copyVideo = container === "mp4" && !video;
+  return [
+    ...inputs.flatMap((input) => [...seekArgs(params), "-i", input]),
     ...(video ? ["-vf", video] : []),
     ...(audio && !muted ? ["-af", audio] : []),
     "-map",
     "0:v:0",
-    ...(muted ? ["-an"] : ["-map", inputs.length > 1 ? "1:a:0?" : "0:a:0?", "-c:a", "aac", "-b:a", "192k"]),
-    ...videoCodec,
-    "-movflags",
-    "+faststart",
+    ...(muted ? ["-an"] : ["-map", inputs.length > 1 ? "1:a:0?" : "0:a:0?", ...codecs.audio]),
+    ...(copyVideo ? ["-c:v", "copy"] : codecs.video),
+    ...codecs.extra,
+    "-y",
+    out,
+  ];
+}
+
+/**
+ * An animated GIF of the (edited) clip: scaled down, at a GIF-friendly frame rate, with a palette
+ * built from the clip itself so colours stay clean.
+ */
+function gifArgs(inputs: string[], params: JobParams, out: string): string[] {
+  // Fit inside a GIF_SIZE square (never upscaling), so tall videos don't make huge GIFs.
+  const fit = `scale=w=min(${GIF_SIZE}\\,iw):h=min(${GIF_SIZE}\\,ih):force_original_aspect_ratio=decrease:flags=lanczos`;
+  const chain = [...videoFilters(params), `fps=${GIF_FPS}`, fit].join(",");
+  return [
+    ...seekArgs(params),
+    "-i",
+    inputs[0],
+    "-vf",
+    `${chain},split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4`,
+    "-map",
+    "0:v:0",
+    "-an",
+    "-loop",
+    "0",
     "-y",
     out,
   ];
@@ -181,7 +256,9 @@ function editsVideo(params: JobParams): boolean {
 
 /** A single MP4 that needs no edits is already the file: save it as fetched. */
 function savesAsIs(recipe: DownloadRecipe, fetched: FetchedMedia[], params: JobParams): boolean {
-  return recipe.mode === "video" && !editsVideo(params) && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
+  return (
+    recipe.mode === "video" && !editsVideo(params) && !params.format && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4"
+  );
 }
 
 /** ffmpeg args turning the fetched inputs into the requested file. */
@@ -192,7 +269,9 @@ function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams
   if (recipe.mode === "audio-m4a") {
     return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "copy", ...metadataArgs(recipe.meta), "-movflags", "+faststart", "-y", out];
   }
-  if (editsVideo(params)) return editArgs(inputs, params, out);
+  if (params.format === "gif") return gifArgs(inputs, params, out);
+  if (params.format === "webm") return editArgs(inputs, params, out, "webm");
+  if (editsVideo(params)) return editArgs(inputs, params, out, "mp4");
   if (inputs.length > 1) {
     return ["-i", inputs[0], "-i", inputs[1], "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", "-y", out];
   }
@@ -218,7 +297,7 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
 
 function outputExt(recipe: DownloadRecipe, params: JobParams): string {
   if (params.frames) return params.frames.mode === "single" ? params.frames.format : "zip";
-  return recipe.mode === "audio-mp3" ? "mp3" : recipe.mode === "audio-m4a" ? "m4a" : "mp4";
+  return recipe.mode === "audio-mp3" ? "mp3" : recipe.mode === "audio-m4a" ? "m4a" : (params.format ?? "mp4");
 }
 
 /** Fetches every stream at once, reporting combined progress. */
@@ -249,9 +328,9 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
   const name = fileName(recipe, params, ext);
 
   try {
-    // Frames only need the picture.
-    const streams = params.frames ? recipe.streams.slice(0, 1) : recipe.streams;
-    const mayProcess = !!params.frames || editsVideo(params) || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
+    // Frames and GIFs only need the picture.
+    const streams = params.frames || params.format === "gif" ? recipe.streams.slice(0, 1) : recipe.streams;
+    const mayProcess = !!params.frames || !!params.format || editsVideo(params) || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
     if (mayProcess) preloadFFmpeg(); // loads while the media downloads
 
     report({ status: "downloading", progress: 0 });

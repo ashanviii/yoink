@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBytes } from "@/lib/format";
-import type { DownloadRecipe, JobParams, MediaOption } from "@/lib/media-types";
+import { GIF_SIZE, MAX_GIF_SEC, type DownloadRecipe, type JobParams, type MediaOption } from "@/lib/media-types";
 import { AlertIcon, CheckIcon, DownloadIcon, RetryIcon } from "./icons";
 import { useDownloadJob } from "./useDownloadJob";
 
@@ -23,10 +23,24 @@ interface JobRowProps {
   sizeBytes?: number | null;
   sizeIsEstimate?: boolean;
   processingLabel?: string;
+  /** Why this can't be made right now (e.g. the clip is too long); disables the button. */
+  unavailable?: string;
 }
 
 /** One downloadable thing: builds it in the browser on click and shows its progress inline. */
-export function JobRow({ recipe, params, label, action, detail, badges = [], best, sizeBytes = null, sizeIsEstimate = false, processingLabel }: JobRowProps) {
+export function JobRow({
+  recipe,
+  params,
+  label,
+  action,
+  detail,
+  badges = [],
+  best,
+  sizeBytes = null,
+  sizeIsEstimate = false,
+  processingLabel,
+  unavailable,
+}: JobRowProps) {
   const { state, start, saveAgain } = useDownloadJob(recipe, params);
   const busy = state.phase === "starting" || state.phase === "working";
   const progress = state.job?.progress ?? 0;
@@ -65,7 +79,7 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
                 ? <span className="text-danger">{state.error}</span>
                 : state.phase === "ready"
                   ? `Saved${size ? ` · ${size}` : ""}. Check your downloads.`
-                  : [detail, size].filter(Boolean).join(" · ")}
+                  : unavailable ?? [detail, size].filter(Boolean).join(" · ")}
           </p>
         </div>
 
@@ -81,9 +95,11 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
           <button
             type="button"
             onClick={start}
-            disabled={busy}
+            disabled={busy || !!unavailable}
             aria-label={`Download ${label} ${action}`}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-text px-4 py-2.5 text-sm font-semibold text-bg transition hover:opacity-85 disabled:cursor-wait disabled:opacity-70"
+            className={`flex shrink-0 items-center gap-1.5 rounded-lg bg-text px-4 py-2.5 text-sm font-semibold text-bg transition hover:opacity-85 disabled:opacity-70 ${
+              unavailable ? "disabled:cursor-not-allowed disabled:opacity-40" : "disabled:cursor-wait"
+            }`}
           >
             {busy ? (
               <span className="size-4 animate-spin rounded-full border-2 border-bg/30 border-t-bg" aria-hidden />
@@ -102,8 +118,39 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
   );
 }
 
+/** The video's edits other than output format, frames or anything set elsewhere. */
+export type VideoEdits = Omit<JobParams, "frames" | "format">;
+
+/** The edited video as a GIF and as WebM, built from one source quality. */
+export function FormatRows({ option, edits, clipSec }: { option: MediaOption; edits: VideoEdits; clipSec: number }) {
+  // A GIF's length after any speed change; long ones make enormous files.
+  const gifSec = clipSec / (edits.speed ?? 1);
+  return (
+    <>
+      <li className="px-1 pt-2 text-xs font-medium text-muted">Other formats</li>
+      <JobRow
+        recipe={option.recipe}
+        params={{ ...edits, format: "gif" }}
+        label="GIF"
+        action="GIF"
+        detail={`Animated · up to ${GIF_SIZE}px · no sound`}
+        processingLabel="Making the GIF…"
+        unavailable={gifSec > MAX_GIF_SEC ? `GIFs can be up to ${MAX_GIF_SEC} s. Turn on Trim to pick a shorter part.` : undefined}
+      />
+      <JobRow
+        recipe={option.recipe}
+        params={{ ...edits, format: "webm" }}
+        label="WebM"
+        action="WEBM"
+        detail={`${option.label} · VP8 + Opus · slow for long videos`}
+        processingLabel="Converting to WebM…"
+      />
+    </>
+  );
+}
+
 /** `edits` holds the video's trim, crop, speed, rotation and flip, if any. */
-export function OptionRow({ option, edits }: { option: MediaOption; edits?: Omit<JobParams, "frames"> }) {
+export function OptionRow({ option, edits }: { option: MediaOption; edits?: VideoEdits }) {
   // `!== undefined`, not truthiness: a volume of 0 (mute) is an edit.
   const params = edits && Object.values(edits).some((value) => value !== undefined) ? edits : undefined;
   return (

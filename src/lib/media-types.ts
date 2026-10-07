@@ -29,6 +29,15 @@ export type FrameParams =
 /** Cap on images in one frame-set ZIP. */
 export const MAX_EXTRACT_FRAMES = 120;
 
+/** Formats a video download can be converted to instead of MP4. */
+export type VideoFormat = "gif" | "webm";
+
+/** Longest side of a GIF, in pixels. */
+export const GIF_SIZE = 480;
+export const GIF_FPS = 12;
+/** Longest GIF, in seconds after any speed change; longer ones make huge files. */
+export const MAX_GIF_SEC = 15;
+
 /** Clockwise rotation in degrees. */
 export type Rotation = 0 | 90 | 180 | 270;
 
@@ -47,6 +56,8 @@ export interface JobParams {
   rotate?: Exclude<Rotation, 0>;
   /** Mirror horizontally or vertically, before rotating. Absent means unflipped. */
   flip?: Exclude<Flip, "none">;
+  /** Convert a video download to this format; absent means MP4. */
+  format?: VideoFormat;
   frames?: FrameParams;
 }
 

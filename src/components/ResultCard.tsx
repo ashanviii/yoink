@@ -6,7 +6,7 @@ import type { CropParams, MediaItem, OptionKind, TrimParams } from "@/lib/media-
 import { CropEditor } from "./CropEditor";
 import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
-import { OptionRow } from "./OptionRow";
+import { FormatRows, OptionRow, type VideoEdits } from "./OptionRow";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TrimEditor } from "./TrimEditor";
 import { VideoTweaks, type Tweaks } from "./VideoTweaks";
@@ -32,6 +32,10 @@ export function ResultCard({ item, uploader, index, total }: Props) {
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
   const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
   const canExtract = !!bestVideo && (item.durationSec ?? 0) > 0;
+  // GIF/WebM are encoded in the browser, so they start from 720p at most (or the only quality there is).
+  const videoOptions = item.options.filter((o) => o.kind === "video");
+  const convertSource = videoOptions.find((o) => Number.parseInt(o.label, 10) <= 720) ?? videoOptions.at(-1);
+  const edits: VideoEdits = { trim: trimParams, crop: cropParams, ...tweaks };
   const tabs: Tab[] = canExtract ? [...kinds, "frames"] : kinds;
   const active = tabs.includes(tab) ? tab : tabs[0];
   const duration = formatDuration(item.durationSec);
@@ -135,9 +139,16 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                   <OptionRow
                     key={`${option.kind}-${option.label}`}
                     option={option}
-                    edits={kind === "video" ? { trim: trimParams, crop: cropParams, ...tweaks } : undefined}
+                    edits={kind === "video" ? edits : undefined}
                   />
                 ))}
+              {kind === "video" && convertSource && (item.durationSec ?? 0) > 0 && (
+                <FormatRows
+                  option={convertSource}
+                  edits={edits}
+                  clipSec={trimParams ? trimParams.end - trimParams.start : item.durationSec!}
+                />
+              )}
             </ul>
           ))}
 
