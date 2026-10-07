@@ -109,7 +109,10 @@ function source(ref: StreamRef): Source {
     if (sources.size >= MAX_SOURCES) dispose(sources.keys().next().value!);
     const urls = new Set<string>();
     entry = { video: openVideo(ref, urls), stills: new Map(), queue: Promise.resolve(), urls };
-    entry.video.catch(() => sources.delete(ref.proxy));
+    entry.video.catch((err) => {
+      console.warn("[yoink] preview stream failed to load", { ext: ref.ext, hls: ref.hls, direct: !!ref.url }, err);
+      sources.delete(ref.proxy);
+    });
     sources.set(ref.proxy, entry);
   }
   return entry;

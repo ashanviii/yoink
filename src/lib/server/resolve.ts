@@ -142,11 +142,16 @@ function slugify(text: string): string {
 
 const COOKIE_ATTRIBUTES = /^(domain|path|expires|max-age|secure|httponly|samesite|priority|partitioned)$/i;
 
-/** yt-dlp's cookie dump → a Cookie request header. */
+/**
+ * yt-dlp's cookie dump → a Cookie request header. Values arrive in Set-Cookie form, where a
+ * value may be wrapped in double quotes (TikTok's tt_chain_token). yt-dlp's own cookie jar
+ * sends those unquoted, and TikTok's CDN answers 403 to the quoted form, so strip them.
+ */
 function cookieHeader(raw: string | null | undefined): string | null {
   const pairs = (raw ?? "")
     .split(/;\s*/)
-    .filter((part) => part.includes("=") && !COOKIE_ATTRIBUTES.test(part.split("=")[0].trim()));
+    .filter((part) => part.includes("=") && !COOKIE_ATTRIBUTES.test(part.split("=")[0].trim()))
+    .map((part) => part.replace(/^([^=]+)="(.*)"$/, "$1=$2"));
   return pairs.length ? pairs.join("; ") : null;
 }
 
