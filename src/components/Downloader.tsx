@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { ApiError, resolveMedia } from "@/lib/api-client";
+import { preloadTurnstile } from "@/lib/client/turnstile";
 import type { ResolveResponse } from "@/lib/media-types";
 import { PLATFORMS, type PlatformId } from "@/lib/platforms";
 import { URL_ERROR_MESSAGES, parseMediaUrl } from "@/lib/url";
@@ -73,6 +74,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
   );
 
   useEffect(() => {
+    preloadTurnstile();
     // Support the PWA share target and deep links: /?url=… or /?text=…
     const params = new URLSearchParams(window.location.search);
     const shared = params.get("url") ?? params.get("text");

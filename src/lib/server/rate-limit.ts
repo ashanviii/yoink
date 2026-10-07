@@ -58,7 +58,7 @@ export class RateLimiter {
   }
 }
 
-type Limiters = { resolve: RateLimiter; media: RateLimiter; thumb: RateLimiter; bytes: RateLimiter };
+type Limiters = { resolve: RateLimiter; media: RateLimiter; thumb: RateLimiter; bytes: RateLimiter; transfer: RateLimiter };
 
 // Survive dev hot reloads without resetting counters.
 const globalForLimits = globalThis as unknown as { __yoinkLimiters?: Limiters };
@@ -71,9 +71,21 @@ export const limiters: Limiters = (globalForLimits.__yoinkLimiters ??= {
   // Bytes relayed through /api/media and /api/thumb: 1 GB per IP per hour, so a script
   // replaying a media token can't burn through the server's monthly transfer.
   bytes: new RateLimiter(1024 ** 3, 60 * 60_000),
+  // The same bytes summed over every client, so many IPs together still can't exceed the plan's transfer.
+  transfer: new RateLimiter(config.dailyTransferGb * 1024 ** 3, 24 * 60 * 60_000),
 });
 
-export const BYTE_LIMIT_MESSAGE = "You've hit the hourly download limit. Try again a bit later.";
+/** Rejects when this client, or the whole site, has used up its relay bandwidth. */
+export function checkTransfer(key: string): void {
+  limiters.bytes.consume(key, 0, "You've hit the hourly download limit. Try again a bit later.");
+  limiters.transfer.consume("site", 0, "Yoinkit has hit its download limit for today. Try again later.");
+}
+
+/** Records bytes relayed to this client. */
+export function chargeTransfer(key: string, bytes: number): void {
+  limiters.bytes.charge(key, bytes);
+  limiters.transfer.charge("site", bytes);
+}
 
 let warnedUnsafeIp = false;
 

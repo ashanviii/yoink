@@ -1,5 +1,5 @@
 import { AppError, errorResponse } from "@/lib/errors";
-import { BYTE_LIMIT_MESSAGE, clientKey, limiters } from "@/lib/server/rate-limit";
+import { chargeTransfer, checkTransfer, clientKey, limiters } from "@/lib/server/rate-limit";
 import { isAllowedThumbnailUrl } from "@/lib/server/thumbnails";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
   try {
     const key = clientKey(request);
     limiters.thumb.consume(key);
-    limiters.bytes.consume(key, 0, BYTE_LIMIT_MESSAGE);
+    checkTransfer(key);
     const raw = new URL(request.url).searchParams.get("u") ?? "";
     const target = isAllowedThumbnailUrl(raw);
     if (!target) throw new AppError("BAD_REQUEST", "Thumbnail host not allowed.");
@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     if (length > MAX_BYTES) throw new AppError("TOO_LARGE");
 
     const buffer = await upstream.arrayBuffer();
-    limiters.bytes.charge(key, buffer.byteLength);
+    chargeTransfer(key, buffer.byteLength);
     if (buffer.byteLength > MAX_BYTES) throw new AppError("TOO_LARGE");
 
     return new Response(buffer, {

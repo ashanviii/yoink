@@ -2,6 +2,7 @@ export type ErrorCode =
   | "BAD_REQUEST"
   | "INVALID_URL"
   | "RATE_LIMITED"
+  | "BOT_CHECK"
   | "BUSY"
   | "NOT_FOUND"
   | "PRIVATE"
@@ -23,6 +24,7 @@ const STATUS: Record<ErrorCode, number> = {
   BAD_REQUEST: 400,
   INVALID_URL: 422,
   RATE_LIMITED: 429,
+  BOT_CHECK: 403,
   BUSY: 503,
   NOT_FOUND: 404,
   PRIVATE: 403,
@@ -45,6 +47,7 @@ const DEFAULT_MESSAGES: Record<ErrorCode, string> = {
   BAD_REQUEST: "That request didn't make sense to us.",
   INVALID_URL: "That link isn't supported.",
   RATE_LIMITED: "Whoa, slow down! Too many requests — try again in a moment.",
+  BOT_CHECK: "We couldn't verify you're human. Refresh the page and try again.",
   BUSY: "We're at capacity right now. Give it a few seconds and retry.",
   NOT_FOUND: "Couldn't find that post. It may have been deleted or the link is wrong.",
   PRIVATE: "This content is private. We only download public posts.",

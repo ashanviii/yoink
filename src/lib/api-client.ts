@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "./errors";
+import { TURNSTILE_HEADER, turnstileToken } from "./client/turnstile";
 import type { ResolveResponse } from "./media-types";
 
 export class ApiError extends Error {
@@ -36,6 +37,19 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
-export function resolveMedia(url: string, signal?: AbortSignal): Promise<ResolveResponse> {
-  return request("/api/resolve", { method: "POST", body: JSON.stringify({ url }), signal });
+export async function resolveMedia(url: string, signal?: AbortSignal): Promise<ResolveResponse> {
+  let token: string | null;
+  try {
+    token = await turnstileToken();
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiError("BOT_CHECK", "We couldn't verify you're human. Refresh the page and try again.");
+  }
+  signal?.throwIfAborted();
+  return request("/api/resolve", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+    signal,
+    headers: token ? { [TURNSTILE_HEADER]: token } : undefined,
+  });
 }

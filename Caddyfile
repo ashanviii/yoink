@@ -2,6 +2,11 @@
 	# Compresses pages and JSON; videos/audio are already compressed and are skipped.
 	encode zstd gzip
 
+	# The API only takes tiny JSON bodies; refuse anything big before it reaches Node.
+	request_body {
+		max_size 64KB
+	}
+
 	# Caddy replaces any client-sent X-Forwarded-For with the real client IP,
 	# which is what YOINK_TRUSTED_PROXY_HOPS=1 expects.
 	reverse_proxy yoink:3000

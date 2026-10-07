@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LANDING_PAGES } from "@/lib/landing-pages";
+import { site } from "@/lib/site";
 import { Logo } from "./Logo";
 
 export function Footer() {
@@ -36,6 +37,7 @@ export function Footer() {
             <li><Link href="/terms" className="transition hover:text-pop">Terms of use</Link></li>
             <li><Link href="/privacy" className="transition hover:text-pop">Privacy</Link></li>
             <li><Link href="/copyright" className="transition hover:text-pop">Copyright & DMCA</Link></li>
+            <li><a href={`mailto:${site.email}`} className="transition hover:text-pop">Contact</a></li>
           </ul>
         </nav>
       </div>

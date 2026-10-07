@@ -4,6 +4,7 @@ import { URL_ERROR_MESSAGES, parseMediaUrl } from "@/lib/url";
 import { assertSameOrigin, noStore, readJson } from "@/lib/server/http";
 import { clientKey, limiters } from "@/lib/server/rate-limit";
 import { resolveMedia } from "@/lib/server/resolve";
+import { assertHuman } from "@/lib/server/turnstile";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,9 @@ const bodySchema = z.object({ url: z.string().max(2048) });
 export async function POST(request: Request) {
   try {
     assertSameOrigin(request);
-    limiters.resolve.consume(clientKey(request));
+    const ip = clientKey(request);
+    limiters.resolve.consume(ip);
+    await assertHuman(request, ip);
 
     const body = bodySchema.safeParse(await readJson(request));
     if (!body.success) throw new AppError("BAD_REQUEST", "Send a JSON body like { \"url\": \"…\" }.");

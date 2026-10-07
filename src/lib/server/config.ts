@@ -47,6 +47,10 @@ export const config = {
   /** Cache resolved links this long (identical links from many users cost one yt-dlp run). 0 disables. */
   resolveCacheTtlMs: int("YOINK_RESOLVE_CACHE_TTL_MS", 5 * 60_000, { allowZero: true }),
   resolveTimeoutMs: int("YOINK_RESOLVE_TIMEOUT_MS", 45_000),
+  /** Cloudflare Turnstile secret. When set, every resolve must carry a valid bot-check token. */
+  turnstileSecret: str("YOINK_TURNSTILE_SECRET"),
+  /** Site-wide cap on bytes relayed by /api/media and /api/thumb, so traffic from many IPs can't run up a bill. */
+  dailyTransferGb: int("YOINK_DAILY_TRANSFER_GB", 30),
   /** How long the media proxy honours a resolved stream. */
   tokenTtlSec: int("YOINK_TOKEN_TTL_SEC", 60 * 60),
   /**

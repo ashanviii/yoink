@@ -3,11 +3,15 @@ import { DIRECT_MEDIA_CSP } from "./src/lib/media-hosts";
 
 const isDev = process.env.NODE_ENV !== "production";
 
+// Cloudflare Turnstile's bot check loads a script and renders in an iframe.
+const turnstile = "https://challenges.cloudflare.com";
+
 const csp = [
   "default-src 'self'",
   // Next.js injects inline bootstrap scripts; dev mode also needs eval for HMR.
   // ffmpeg.wasm needs to compile WebAssembly.
-  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${turnstile}${isDev ? " 'unsafe-eval'" : ""}`,
+  `frame-src ${turnstile}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
