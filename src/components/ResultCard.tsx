@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
-import { SPEEDS, VOLUMES, type CropParams, type Flip, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
+import { SPEEDS, type CropParams, type Flip, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
 import { ChoicePanel } from "./ChoicePanel";
 import { CropEditor } from "./CropEditor";
 import { clock } from "./filmstrip";
@@ -11,12 +11,11 @@ import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
 import { PreviewPlayer } from "./PreviewPlayer";
 import { TrimEditor } from "./TrimEditor";
+import { VolumeSlider } from "./VolumeSlider";
 
 type Tab = OptionKind | "frames";
 
-const SPEED_OPTIONS = SPEEDS.map((s) => ({ value: s as number, label: `${s}×` }));
-const VOLUME_OPTIONS = VOLUMES.map((v) => ({ value: v as number, label: v === 0 ? "Mute" : `${v * 100}%` }));
-const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
+const SPEED_OPTIONS = SPEEDS.map((s) => ({ value: s as number, label: `${s}×` }));const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
   { value: 0, label: "None" },
   { value: 90, label: "90° right" },
   { value: 180, label: "180°" },
@@ -136,7 +135,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 value={speed}
                 onChange={setSpeed}
               />
-              <ChoicePanel title="Volume" options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
+              <VolumeSlider volume={volume} onVolumeChange={setVolume} />
               <ChoicePanel title="Flip" options={FLIP_OPTIONS} value={flip} onChange={setFlip} />
               <ChoicePanel title="Rotate" options={ROTATE_OPTIONS} value={rotate} onChange={setRotate}>
                 {item.thumbnail && (

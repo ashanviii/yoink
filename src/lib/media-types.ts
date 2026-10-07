@@ -31,10 +31,6 @@ export const MAX_EXTRACT_FRAMES = 120;
 
 /** Playback speeds offered for a video download. */
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
-
-/** Volume levels offered for a video download; 0 mutes it. */
-export const VOLUMES = [0, 0.5, 1, 1.5, 2] as const;
-
 /** Clockwise rotation in degrees. */
 export type Rotation = 0 | 90 | 180 | 270;
 
