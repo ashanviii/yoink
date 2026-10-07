@@ -102,9 +102,9 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
   );
 }
 
-/** `edits` holds the video's trim and crop, if any. */
-export function OptionRow({ option, edits }: { option: MediaOption; edits?: Pick<JobParams, "trim" | "crop"> }) {
-  const params = edits?.trim || edits?.crop ? { trim: edits.trim, crop: edits.crop } : undefined;
+/** `edits` holds the video's trim, crop and speed, if any. */
+export function OptionRow({ option, edits }: { option: MediaOption; edits?: Pick<JobParams, "trim" | "crop" | "speed"> }) {
+  const params = edits?.trim || edits?.crop || edits?.speed ? edits : undefined;
   return (
     <JobRow
       recipe={option.recipe}

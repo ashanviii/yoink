@@ -142,15 +142,18 @@ function cropFilter({ x, y, w, h, ratio }: CropParams): string {
   return `crop=trunc(iw*${f(w)}/2)*2:${height}:trunc(iw*${f(x)}):trunc(ih*${f(y)})`;
 }
 
-/** Re-encodes the video, keeping only the trimmed range and/or cropped region. */
+/** Re-encodes the video, keeping only the trimmed range and/or cropped region, at the chosen speed. */
 function editArgs(inputs: string[], params: JobParams, out: string): string[] {
-  const { trim, crop } = params;
+  const { trim, crop, speed } = params;
   // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
-  const seek = trim ? ["-ss", trim.start.toFixed(3)] : [];
+  // The range is read as input options, so it stays in source time whatever the speed.
+  const range = trim ? ["-ss", trim.start.toFixed(3), "-t", (trim.end - trim.start).toFixed(3)] : [];
+  const video = [crop && cropFilter(crop), speed && `setpts=PTS/${speed}`].filter(Boolean).join(",");
   return [
-    ...inputs.flatMap((input) => [...seek, "-i", input]),
-    ...(trim ? ["-t", (trim.end - trim.start).toFixed(3)] : []),
-    ...(crop ? ["-vf", cropFilter(crop)] : []),
+    ...inputs.flatMap((input) => [...range, "-i", input]),
+    ...(video ? ["-vf", video] : []),
+    // atempo keeps the pitch; it's ignored when the video has no sound.
+    ...(speed ? ["-af", `atempo=${speed}`] : []),
     "-map",
     "0:v:0",
     "-map",
@@ -174,9 +177,13 @@ function editArgs(inputs: string[], params: JobParams, out: string): string[] {
   ];
 }
 
-/** A single MP4 that needs no trim is already the file: save it as fetched. */
+function editsVideo(params: JobParams): boolean {
+  return !!(params.trim || params.crop || params.speed);
+}
+
+/** A single MP4 that needs no edits is already the file: save it as fetched. */
 function savesAsIs(recipe: DownloadRecipe, fetched: FetchedMedia[], params: JobParams): boolean {
-  return recipe.mode === "video" && !params.trim && !params.crop && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
+  return recipe.mode === "video" && !editsVideo(params) && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
 }
 
 /** ffmpeg args turning the fetched inputs into the requested file. */
@@ -187,7 +194,7 @@ function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams
   if (recipe.mode === "audio-m4a") {
     return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "copy", ...metadataArgs(recipe.meta), "-movflags", "+faststart", "-y", out];
   }
-  if (params.trim || params.crop) return editArgs(inputs, params, out);
+  if (editsVideo(params)) return editArgs(inputs, params, out);
   if (inputs.length > 1) {
     return ["-i", inputs[0], "-i", inputs[1], "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", "-y", out];
   }
@@ -203,6 +210,7 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
   } else {
     if (params.trim) suffix += "-clip";
     if (params.crop) suffix += "-cropped";
+    if (params.speed) suffix += `-${params.speed}x`;
   }
   return `${recipe.stem}${suffix}.${ext}`;
 }
@@ -242,7 +250,7 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
   try {
     // Frames only need the picture.
     const streams = params.frames ? recipe.streams.slice(0, 1) : recipe.streams;
-    const mayProcess = !!params.frames || !!params.trim || !!params.crop || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
+    const mayProcess = !!params.frames || editsVideo(params) || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
     if (mayProcess) preloadFFmpeg(); // loads while the media downloads
 
     report({ status: "downloading", progress: 0 });

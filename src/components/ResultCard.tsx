@@ -8,6 +8,7 @@ import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
 import { PreviewPlayer } from "./PreviewPlayer";
+import { SpeedPicker } from "./SpeedPicker";
 import { TrimEditor } from "./TrimEditor";
 
 type Tab = OptionKind | "frames";
@@ -26,6 +27,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
   const [tab, setTab] = useState<Tab>("video");
   const [trimParams, setTrimParams] = useState<TrimParams | undefined>();
   const [cropParams, setCropParams] = useState<CropParams | undefined>();
+  const [speed, setSpeed] = useState(1);
   const tabsId = useId();
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
   const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
@@ -109,6 +111,11 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 height={item.height}
                 onCropChange={setCropParams}
               />
+              <SpeedPicker
+                speed={speed}
+                clipSec={trimParams ? trimParams.end - trimParams.start : item.durationSec!}
+                onSpeedChange={setSpeed}
+              />
             </div>
           )}
 
@@ -128,7 +135,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                   <OptionRow
                     key={`${option.kind}-${option.label}`}
                     option={option}
-                    edits={kind === "video" ? { trim: trimParams, crop: cropParams } : undefined}
+                    edits={kind === "video" ? { trim: trimParams, crop: cropParams, speed: speed === 1 ? undefined : speed } : undefined}
                   />
                 ))}
             </ul>

@@ -29,10 +29,15 @@ export type FrameParams =
 /** Cap on images in one frame-set ZIP. */
 export const MAX_EXTRACT_FRAMES = 120;
 
-/** Extra processing for a download: trim and/or crop a video, or pull frames from it. */
+/** Playback speeds offered for a video download. */
+export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
+
+/** Extra processing for a download: trim, crop and/or speed up a video, or pull frames from it. */
 export interface JobParams {
   trim?: TrimParams;
   crop?: CropParams;
+  /** Playback speed multiplier; absent means 1×. */
+  speed?: number;
   frames?: FrameParams;
 }
 
