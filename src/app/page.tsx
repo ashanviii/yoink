@@ -85,7 +85,7 @@ export default function Home() {
           href="/download-videos-from-social-media"
           className="group inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-text"
         >
-          Read the full guide to downloading from each platform, on iPhone, Android and desktop
+          Read the full guide to downloading and trimming videos from each platform, on iPhone, Android and desktop
           <ArrowIcon size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>

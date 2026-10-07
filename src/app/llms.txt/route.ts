@@ -15,7 +15,7 @@ ${site.name} is a free, mobile-first video downloader and editor that runs in th
 
 - [Home — all platforms](${absoluteUrl("/")}): Overview of every supported platform and what is and isn't supported.
 ${pages.join("\n")}
-- [How to download videos from Instagram, TikTok, Facebook, Snapchat & Pinterest](${absoluteUrl("/download-videos-from-social-media")}): Guide to what works on each platform, how to choose a safe downloader, and step-by-step instructions.
+- [How to download and trim videos from Instagram, TikTok, Facebook, Snapchat & Pinterest](${absoluteUrl("/download-videos-from-social-media")}): Guide to what works on each platform, saving just the part you want (trim, crop, GIF), choosing a safe downloader, and step-by-step instructions.
 
 ## Policies
 
