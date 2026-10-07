@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
-import { SPEEDS, type CropParams, type Flip, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
+import type { CropParams, Flip, MediaItem, OptionKind, Rotation, TrimParams } from "@/lib/media-types";
 import { ChoicePanel } from "./ChoicePanel";
 import { CropEditor } from "./CropEditor";
 import { clock } from "./filmstrip";
@@ -10,12 +10,23 @@ import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
 import { PreviewPlayer } from "./PreviewPlayer";
+import { Slider } from "./Slider";
 import { TrimEditor } from "./TrimEditor";
-import { VolumeSlider } from "./VolumeSlider";
 
 type Tab = OptionKind | "frames";
 
-const SPEED_OPTIONS = SPEEDS.map((s) => ({ value: s as number, label: `${s}×` }));const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
+const SPEED_MARKS = [
+  { value: 0.5, label: "0.5×" },
+  { value: 1, label: "1×" },
+  { value: 2, label: "2×" },
+  { value: 3, label: "3×" },
+];
+const VOLUME_MARKS = [
+  { value: 0, label: "Mute" },
+  { value: 1, label: "100%" },
+  { value: 2, label: "200%" },
+];
+const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
   { value: 0, label: "None" },
   { value: 90, label: "90° right" },
   { value: 180, label: "180°" },
@@ -128,14 +139,29 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 height={item.height}
                 onCropChange={setCropParams}
               />
-              <ChoicePanel
+              <Slider
                 title="Speed"
-                note={speed !== 1 && `plays for ${clock((trimParams ? trimParams.end - trimParams.start : item.durationSec!) / speed)}`}
-                options={SPEED_OPTIONS}
                 value={speed}
+                min={0.5}
+                max={3}
+                step={0.05}
+                defaultValue={1}
+                format={(s) => `${s}×`}
+                note={speed !== 1 && `plays for ${clock((trimParams ? trimParams.end - trimParams.start : item.durationSec!) / speed)}`}
+                marks={SPEED_MARKS}
                 onChange={setSpeed}
               />
-              <VolumeSlider volume={volume} onVolumeChange={setVolume} />
+              <Slider
+                title="Volume"
+                value={volume}
+                min={0}
+                max={2}
+                step={0.05}
+                defaultValue={1}
+                format={(v) => (v === 0 ? "Muted" : `${Math.round(v * 100)}%`)}
+                marks={VOLUME_MARKS}
+                onChange={setVolume}
+              />
               <ChoicePanel title="Flip" options={FLIP_OPTIONS} value={flip} onChange={setFlip} />
               <ChoicePanel title="Rotate" options={ROTATE_OPTIONS} value={rotate} onChange={setRotate}>
                 {item.thumbnail && (

@@ -29,8 +29,6 @@ export type FrameParams =
 /** Cap on images in one frame-set ZIP. */
 export const MAX_EXTRACT_FRAMES = 120;
 
-/** Playback speeds offered for a video download. */
-export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 /** Clockwise rotation in degrees. */
 export type Rotation = 0 | 90 | 180 | 270;
 
