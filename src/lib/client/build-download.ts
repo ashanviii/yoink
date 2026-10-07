@@ -142,13 +142,18 @@ function cropFilter({ x, y, w, h, ratio }: CropParams): string {
   return `crop=trunc(iw*${f(w)}/2)*2:${height}:trunc(iw*${f(x)}):trunc(ih*${f(y)})`;
 }
 
-/** Re-encodes the video, keeping only the trimmed range and/or cropped region, at the chosen speed. */
+const ROTATE_FILTER = { 90: "transpose=clock", 180: "hflip,vflip", 270: "transpose=cclock" } as const;
+
+/** Re-encodes the video, keeping only the trimmed range and/or cropped region, at the chosen speed and rotation. */
 function editArgs(inputs: string[], params: JobParams, out: string): string[] {
-  const { trim, crop, speed } = params;
+  const { trim, crop, speed, rotate } = params;
   // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
   // The range is read as input options, so it stays in source time whatever the speed.
   const range = trim ? ["-ss", trim.start.toFixed(3), "-t", (trim.end - trim.start).toFixed(3)] : [];
-  const video = [crop && cropFilter(crop), speed && `setpts=PTS/${speed}`].filter(Boolean).join(",");
+  // Crop first: the crop box is drawn on the unrotated frame.
+  const video = [crop && cropFilter(crop), rotate && ROTATE_FILTER[rotate], speed && `setpts=PTS/${speed}`]
+    .filter(Boolean)
+    .join(",");
   return [
     ...inputs.flatMap((input) => [...range, "-i", input]),
     ...(video ? ["-vf", video] : []),
@@ -178,7 +183,7 @@ function editArgs(inputs: string[], params: JobParams, out: string): string[] {
 }
 
 function editsVideo(params: JobParams): boolean {
-  return !!(params.trim || params.crop || params.speed);
+  return !!(params.trim || params.crop || params.speed || params.rotate);
 }
 
 /** A single MP4 that needs no edits is already the file: save it as fetched. */
@@ -211,6 +216,7 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
     if (params.trim) suffix += "-clip";
     if (params.crop) suffix += "-cropped";
     if (params.speed) suffix += `-${params.speed}x`;
+    if (params.rotate) suffix += `-rotated`;
   }
   return `${recipe.stem}${suffix}.${ext}`;
 }

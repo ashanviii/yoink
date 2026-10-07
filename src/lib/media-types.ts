@@ -32,12 +32,18 @@ export const MAX_EXTRACT_FRAMES = 120;
 /** Playback speeds offered for a video download. */
 export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
-/** Extra processing for a download: trim, crop and/or speed up a video, or pull frames from it. */
+/** Clockwise rotation in degrees. */
+export type Rotation = 0 | 90 | 180 | 270;
+
+/** Extra processing for a download: trim, crop, speed up and/or rotate a video, or pull frames from it. */
 export interface JobParams {
   trim?: TrimParams;
+  /** In the source frame's coordinates, applied before rotating. */
   crop?: CropParams;
   /** Playback speed multiplier; absent means 1×. */
   speed?: number;
+  /** Absent means unrotated. */
+  rotate?: Exclude<Rotation, 0>;
   frames?: FrameParams;
 }
 

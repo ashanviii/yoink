@@ -2,16 +2,25 @@
 
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
-import type { CropParams, MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
+import { SPEEDS, type CropParams, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
+import { ChoicePanel } from "./ChoicePanel";
 import { CropEditor } from "./CropEditor";
+import { clock } from "./filmstrip";
 import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
 import { PreviewPlayer } from "./PreviewPlayer";
-import { SpeedPicker } from "./SpeedPicker";
 import { TrimEditor } from "./TrimEditor";
 
 type Tab = OptionKind | "frames";
+
+const SPEED_OPTIONS = SPEEDS.map((s) => ({ value: s as number, label: `${s}×` }));
+const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
+  { value: 0, label: "None" },
+  { value: 90, label: "90° right" },
+  { value: 180, label: "180°" },
+  { value: 270, label: "90° left" },
+];
 
 const TAB_LABEL: Record<Tab, string> = { video: "Video", audio: "Audio", frames: "Frames" };
 const TAB_ICON: Record<Tab, typeof FilmIcon> = { video: FilmIcon, audio: MusicIcon, frames: ImageIcon };
@@ -27,7 +36,8 @@ export function ResultCard({ item, uploader, index, total }: Props) {
   const [tab, setTab] = useState<Tab>("video");
   const [trimParams, setTrimParams] = useState<TrimParams | undefined>();
   const [cropParams, setCropParams] = useState<CropParams | undefined>();
-  const [speed, setSpeed] = useState(1);
+  const [speed, setSpeed] = useState<number>(1);
+  const [rotate, setRotate] = useState<Rotation>(0);
   const tabsId = useId();
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
   const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
@@ -111,11 +121,27 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 height={item.height}
                 onCropChange={setCropParams}
               />
-              <SpeedPicker
-                speed={speed}
-                clipSec={trimParams ? trimParams.end - trimParams.start : item.durationSec!}
-                onSpeedChange={setSpeed}
+              <ChoicePanel
+                title="Speed"
+                note={speed !== 1 && `plays for ${clock((trimParams ? trimParams.end - trimParams.start : item.durationSec!) / speed)}`}
+                options={SPEED_OPTIONS}
+                value={speed}
+                onChange={setSpeed}
               />
+              <ChoicePanel title="Rotate" options={ROTATE_OPTIONS} value={rotate} onChange={setRotate}>
+                {item.thumbnail && (
+                  <div className="grid size-16 shrink-0 place-items-center" aria-hidden>
+                    {/* Same proxied thumbnail as above, turned to preview the rotation. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={item.thumbnail}
+                      alt=""
+                      className="max-h-14 max-w-14 rounded transition-transform duration-300"
+                      style={{ transform: `rotate(${rotate}deg)` }}
+                    />
+                  </div>
+                )}
+              </ChoicePanel>
             </div>
           )}
 
@@ -135,7 +161,11 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                   <OptionRow
                     key={`${option.kind}-${option.label}`}
                     option={option}
-                    edits={kind === "video" ? { trim: trimParams, crop: cropParams, speed: speed === 1 ? undefined : speed } : undefined}
+                    edits={
+                      kind === "video"
+                        ? { trim: trimParams, crop: cropParams, speed: speed === 1 ? undefined : speed, rotate: rotate || undefined }
+                        : undefined
+                    }
                   />
                 ))}
             </ul>
