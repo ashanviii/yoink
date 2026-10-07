@@ -2,7 +2,7 @@
 
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
-import { SPEEDS, type CropParams, type Flip, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
+import { SPEEDS, VOLUMES, type CropParams, type Flip, type MediaItem, type OptionKind, type Rotation, type TrimParams } from "@/lib/media-types";
 import { ChoicePanel } from "./ChoicePanel";
 import { CropEditor } from "./CropEditor";
 import { clock } from "./filmstrip";
@@ -15,6 +15,7 @@ import { TrimEditor } from "./TrimEditor";
 type Tab = OptionKind | "frames";
 
 const SPEED_OPTIONS = SPEEDS.map((s) => ({ value: s as number, label: `${s}×` }));
+const VOLUME_OPTIONS = VOLUMES.map((v) => ({ value: v as number, label: v === 0 ? "Mute" : `${v * 100}%` }));
 const ROTATE_OPTIONS: { value: Rotation; label: string }[] = [
   { value: 0, label: "None" },
   { value: 90, label: "90° right" },
@@ -44,6 +45,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
   const [speed, setSpeed] = useState<number>(1);
   const [rotate, setRotate] = useState<Rotation>(0);
   const [flip, setFlip] = useState<Flip>("none");
+  const [volume, setVolume] = useState<number>(1);
   const tabsId = useId();
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
   const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
@@ -134,6 +136,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                 value={speed}
                 onChange={setSpeed}
               />
+              <ChoicePanel title="Volume" options={VOLUME_OPTIONS} value={volume} onChange={setVolume} />
               <ChoicePanel title="Flip" options={FLIP_OPTIONS} value={flip} onChange={setFlip} />
               <ChoicePanel title="Rotate" options={ROTATE_OPTIONS} value={rotate} onChange={setRotate}>
                 {item.thumbnail && (
@@ -178,6 +181,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                             speed: speed === 1 ? undefined : speed,
                             rotate: rotate || undefined,
                             flip: flip === "none" ? undefined : flip,
+                            volume: volume === 1 ? undefined : volume,
                           }
                         : undefined
                     }

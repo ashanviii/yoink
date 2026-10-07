@@ -104,7 +104,8 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
 
 /** `edits` holds the video's trim, crop, speed, rotation and flip, if any. */
 export function OptionRow({ option, edits }: { option: MediaOption; edits?: Omit<JobParams, "frames"> }) {
-  const params = edits && Object.values(edits).some(Boolean) ? edits : undefined;
+  // `!== undefined`, not truthiness: a volume of 0 (mute) is an edit.
+  const params = edits && Object.values(edits).some((value) => value !== undefined) ? edits : undefined;
   return (
     <JobRow
       recipe={option.recipe}

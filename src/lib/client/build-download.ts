@@ -145,9 +145,9 @@ function cropFilter({ x, y, w, h, ratio }: CropParams): string {
 const ROTATE_FILTER = { 90: "transpose=clock", 180: "hflip,vflip", 270: "transpose=cclock" } as const;
 const FLIP_FILTER = { horizontal: "hflip", vertical: "vflip" } as const;
 
-/** Re-encodes the video with the chosen trim, crop, flip, rotation and speed. */
+/** Re-encodes the video with the chosen trim, crop, flip, rotation, speed and volume. */
 function editArgs(inputs: string[], params: JobParams, out: string): string[] {
-  const { trim, crop, speed, rotate, flip } = params;
+  const { trim, crop, speed, rotate, flip, volume } = params;
   // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
   // The range is read as input options, so it stays in source time whatever the speed.
   const range = trim ? ["-ss", trim.start.toFixed(3), "-t", (trim.end - trim.start).toFixed(3)] : [];
@@ -155,27 +155,19 @@ function editArgs(inputs: string[], params: JobParams, out: string): string[] {
   const video = [crop && cropFilter(crop), flip && FLIP_FILTER[flip], rotate && ROTATE_FILTER[rotate], speed && `setpts=PTS/${speed}`]
     .filter(Boolean)
     .join(",");
+  // atempo keeps the pitch. Audio filters are ignored when the video has no sound.
+  const audio = [speed && `atempo=${speed}`, volume && `volume=${volume}`].filter(Boolean).join(",");
+  const muted = volume === 0;
+  // A volume-only edit leaves the picture alone, so it's copied instead of re-encoded (much faster).
+  const videoCodec = video || trim ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"] : ["-c:v", "copy"];
   return [
     ...inputs.flatMap((input) => [...range, "-i", input]),
     ...(video ? ["-vf", video] : []),
-    // atempo keeps the pitch; it's ignored when the video has no sound.
-    ...(speed ? ["-af", `atempo=${speed}`] : []),
+    ...(audio && !muted ? ["-af", audio] : []),
     "-map",
     "0:v:0",
-    "-map",
-    inputs.length > 1 ? "1:a:0?" : "0:a:0?",
-    "-c:v",
-    "libx264",
-    "-preset",
-    "veryfast",
-    "-crf",
-    "20",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "192k",
+    ...(muted ? ["-an"] : ["-map", inputs.length > 1 ? "1:a:0?" : "0:a:0?", "-c:a", "aac", "-b:a", "192k"]),
+    ...videoCodec,
     "-movflags",
     "+faststart",
     "-y",
@@ -184,7 +176,7 @@ function editArgs(inputs: string[], params: JobParams, out: string): string[] {
 }
 
 function editsVideo(params: JobParams): boolean {
-  return !!(params.trim || params.crop || params.speed || params.rotate || params.flip);
+  return !!(params.trim || params.crop || params.speed || params.rotate || params.flip) || params.volume !== undefined;
 }
 
 /** A single MP4 that needs no edits is already the file: save it as fetched. */
@@ -219,6 +211,7 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
     if (params.speed) suffix += `-${params.speed}x`;
     if (params.flip) suffix += "-flipped";
     if (params.rotate) suffix += "-rotated";
+    if (params.volume !== undefined) suffix += params.volume === 0 ? "-muted" : `-vol${Math.round(params.volume * 100)}`;
   }
   return `${recipe.stem}${suffix}.${ext}`;
 }
