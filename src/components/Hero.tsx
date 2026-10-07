@@ -10,10 +10,10 @@ interface Props {
 
 export function Hero({ title, subtitle, placeholder, platform }: Props) {
   return (
-    <section className="mx-auto max-w-5xl px-4 pb-4 pt-10 sm:pt-20">
-      <h1 className="max-w-3xl font-display text-[2.4rem] font-bold leading-[1.02] sm:text-[3.4rem]">{title}</h1>
-      <p className="mt-4 max-w-xl text-base text-muted sm:text-lg">{subtitle}</p>
-      <div className="mt-8 max-w-3xl">
+    <section className="mx-auto max-w-5xl px-4 pb-4 pt-10 text-center sm:pt-20">
+      <h1 className="mx-auto max-w-3xl font-display text-[2.4rem] font-bold leading-[1.02] sm:text-[3.4rem]">{title}</h1>
+      <p className="mx-auto mt-4 max-w-xl text-base text-muted sm:text-lg">{subtitle}</p>
+      <div className="mx-auto mt-8 max-w-3xl text-left">
         <Downloader placeholder={placeholder} platform={platform} />
       </div>
     </section>

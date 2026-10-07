@@ -105,7 +105,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
       else setInput(text);
     } catch {
       inputRef.current?.focus();
-      fail("Couldn't read your clipboard. Long-press the box and tap Paste instead.");
+      fail("Couldn't read your clipboard. Paste the link into the box instead.");
     }
   };
 
@@ -201,9 +201,9 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
           <ArrowIcon size={18} className={loading ? "animate-pulse" : ""} />
         </button>
 
-        <div id="media-url-status" aria-live="polite" className="min-h-6 px-1 pt-2 text-sm">
+        <div id="media-url-status" aria-live="polite" className="min-h-6 px-1 pt-2 text-center text-sm">
           {status === "error" && error ? (
-            <p className="flex items-start gap-1.5 text-danger">
+            <p className="flex items-start justify-center gap-1.5 text-danger">
               <AlertIcon size={16} className="mt-0.5 shrink-0" /> {error}
             </p>
           ) : hint ? (
