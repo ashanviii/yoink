@@ -75,7 +75,7 @@ const ERROR_PATTERNS: Array<[RegExp, ConstructorParameters<typeof AppError>[0]]>
   [/sign in to confirm your age|age[- ]restricted|inappropriate for some users/i, "AGE_RESTRICTED"],
   [/sign in to confirm you.?re not a bot|http error 429|too many requests|rate[- ]limit/i, "UPSTREAM_BLOCKED"],
   [/login required|requires? (a )?log ?in|cookies? (are|is) (needed|required)|use --cookies|authentication|log in to/i, "LOGIN_REQUIRED"],
-  [/not available in your country|geo.?restrict|blocked it in your country/i, "GEO_BLOCKED"],
+  [/not available in your country|geo.?restrict|blocked it in your country|ip address is blocked from accessing this post/i, "GEO_BLOCKED"],
   [/drm protected|this video is drm/i, "DRM"],
   [/is live|live event will begin|premieres in|is_live|is a live/i, "LIVE"],
   [/there is no video in this post|no video formats found|no media found|requested format is not available|no video could be found/i, "NO_MEDIA"],
