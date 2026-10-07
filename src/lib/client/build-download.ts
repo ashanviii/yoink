@@ -143,15 +143,16 @@ function cropFilter({ x, y, w, h, ratio }: CropParams): string {
 }
 
 const ROTATE_FILTER = { 90: "transpose=clock", 180: "hflip,vflip", 270: "transpose=cclock" } as const;
+const FLIP_FILTER = { horizontal: "hflip", vertical: "vflip" } as const;
 
-/** Re-encodes the video, keeping only the trimmed range and/or cropped region, at the chosen speed and rotation. */
+/** Re-encodes the video with the chosen trim, crop, flip, rotation and speed. */
 function editArgs(inputs: string[], params: JobParams, out: string): string[] {
-  const { trim, crop, speed, rotate } = params;
+  const { trim, crop, speed, rotate, flip } = params;
   // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
   // The range is read as input options, so it stays in source time whatever the speed.
   const range = trim ? ["-ss", trim.start.toFixed(3), "-t", (trim.end - trim.start).toFixed(3)] : [];
-  // Crop first: the crop box is drawn on the unrotated frame.
-  const video = [crop && cropFilter(crop), rotate && ROTATE_FILTER[rotate], speed && `setpts=PTS/${speed}`]
+  // Crop first: the crop box is drawn on the untransformed frame. Flip before rotating, as the preview shows it.
+  const video = [crop && cropFilter(crop), flip && FLIP_FILTER[flip], rotate && ROTATE_FILTER[rotate], speed && `setpts=PTS/${speed}`]
     .filter(Boolean)
     .join(",");
   return [
@@ -183,7 +184,7 @@ function editArgs(inputs: string[], params: JobParams, out: string): string[] {
 }
 
 function editsVideo(params: JobParams): boolean {
-  return !!(params.trim || params.crop || params.speed || params.rotate);
+  return !!(params.trim || params.crop || params.speed || params.rotate || params.flip);
 }
 
 /** A single MP4 that needs no edits is already the file: save it as fetched. */
@@ -216,7 +217,8 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
     if (params.trim) suffix += "-clip";
     if (params.crop) suffix += "-cropped";
     if (params.speed) suffix += `-${params.speed}x`;
-    if (params.rotate) suffix += `-rotated`;
+    if (params.flip) suffix += "-flipped";
+    if (params.rotate) suffix += "-rotated";
   }
   return `${recipe.stem}${suffix}.${ext}`;
 }

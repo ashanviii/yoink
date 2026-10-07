@@ -35,6 +35,8 @@ export const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 /** Clockwise rotation in degrees. */
 export type Rotation = 0 | 90 | 180 | 270;
 
+export type Flip = "none" | "horizontal" | "vertical";
+
 /** Extra processing for a download: trim, crop, speed up and/or rotate a video, or pull frames from it. */
 export interface JobParams {
   trim?: TrimParams;
@@ -44,6 +46,8 @@ export interface JobParams {
   speed?: number;
   /** Absent means unrotated. */
   rotate?: Exclude<Rotation, 0>;
+  /** Mirror horizontally or vertically, before rotating. Absent means unflipped. */
+  flip?: Exclude<Flip, "none">;
   frames?: FrameParams;
 }
 
