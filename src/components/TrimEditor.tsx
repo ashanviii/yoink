@@ -165,7 +165,7 @@ export function TrimEditor({ durationSec, preview, onTrimChange }: Props) {
   };
 
   return (
-    <div className="rounded-2xl border border-border bg-surface-2 p-3">
+    <div className="rounded-lg border border-border bg-surface-2 p-3">
       <label htmlFor={`${id}-toggle`} className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold">
         <input
           id={`${id}-toggle`}

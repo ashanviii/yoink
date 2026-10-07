@@ -6,7 +6,7 @@ import { preloadTurnstile } from "@/lib/client/turnstile";
 import type { ResolveResponse } from "@/lib/media-types";
 import { PLATFORMS, type PlatformId } from "@/lib/platforms";
 import { URL_ERROR_MESSAGES, parseMediaUrl } from "@/lib/url";
-import { AlertIcon, ArrowIcon, ClipboardIcon, PlatformIcon, XIcon } from "./icons";
+import { AlertIcon, ArrowIcon, ClipboardIcon, LinkIcon, PlatformIcon, XIcon } from "./icons";
 import { ResultCard } from "./ResultCard";
 
 type Status = "idle" | "loading" | "done" | "error";
@@ -127,15 +127,15 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
       <form onSubmit={onSubmit} noValidate className="relative" aria-label="Download media">
         <div
           key={shake}
-          className={`group relative flex items-center gap-2 rounded-[1.75rem] border-2 bg-surface p-2 shadow-card transition-colors focus-within:border-text ${
+          className={`group relative flex items-center gap-2 rounded-xl border bg-surface p-1.5 pl-3 shadow-card transition-colors focus-within:border-text ${
             status === "error" ? "animate-shake border-danger" : "border-border"
           }`}
         >
-          <div className="size-11 shrink-0 overflow-hidden rounded-2xl" aria-hidden>
+          <div className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg text-muted" aria-hidden>
             {detected ? (
-              <PlatformIcon platform={detected.id} size={44} className="size-full" />
+              <PlatformIcon platform={detected.id} size={32} className="size-full" />
             ) : (
-              <div className="grid size-full place-items-center bg-surface-2 text-lg text-muted">🔗</div>
+              <LinkIcon size={18} />
             )}
           </div>
           <label htmlFor="media-url" className="sr-only">
@@ -167,7 +167,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
               type="button"
               onClick={clear}
               aria-label="Clear link"
-              className="grid size-9 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface-2 hover:text-text active:scale-90"
+              className="grid size-9 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-text"
             >
               <XIcon size={16} />
             </button>
@@ -176,7 +176,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
               <button
                 type="button"
                 onClick={paste}
-                className="flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-sm font-semibold transition hover:border-text active:scale-95"
+                className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface-2 hover:text-text"
               >
                 <ClipboardIcon size={15} /> Paste
               </button>
@@ -185,23 +185,23 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
           <button
             type="submit"
             disabled={loading}
-            className="relative hidden shrink-0 items-center gap-2 overflow-hidden rounded-[1.25rem] bg-accent px-6 py-3 font-display text-base font-bold text-accent-ink transition hover:-translate-y-0.5 hover:shadow-[0_4px_0_0_var(--text)] active:translate-y-0 active:scale-95 active:shadow-none disabled:cursor-wait sm:flex"
+            className="hidden shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-[15px] font-semibold text-accent-ink transition hover:brightness-95 disabled:cursor-wait sm:flex"
           >
             {loading ? "Fetching…" : "Yoink it"}
-            <ArrowIcon size={18} className={loading ? "animate-pulse" : ""} />
+            <ArrowIcon size={17} className={loading ? "animate-pulse" : ""} />
           </button>
         </div>
 
         <button
           type="submit"
           disabled={loading}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-accent px-6 py-4 font-display text-lg font-bold text-accent-ink transition active:scale-[0.98] disabled:cursor-wait sm:hidden"
+          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-accent-ink transition active:brightness-95 disabled:cursor-wait sm:hidden"
         >
           {loading ? "Fetching…" : "Yoink it"}
           <ArrowIcon size={18} className={loading ? "animate-pulse" : ""} />
         </button>
 
-        <div id="media-url-status" aria-live="polite" className="min-h-6 px-3 pt-2 text-sm">
+        <div id="media-url-status" aria-live="polite" className="min-h-6 px-1 pt-2 text-sm">
           {status === "error" && error ? (
             <p className="flex items-start gap-1.5 text-danger">
               <AlertIcon size={16} className="mt-0.5 shrink-0" /> {error}
@@ -210,13 +210,11 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
             <p className="text-muted">{hint}</p>
           ) : detected ? (
             <p className="text-muted">
-              {detected.name} link detected{detected.id === "tiktok" ? " · we'll skip the watermark" : ""} ✓
+              {detected.name} link{detected.id === "tiktok" ? ", we'll get the version without the watermark" : ""}
             </p>
           ) : (
             <p className="text-muted">
-              {platform
-                ? `Works with any public ${PLATFORMS[platform].name} link.`
-                : "Instagram · TikTok · Facebook · Snapchat · Pinterest — public links only."}
+              {platform ? `Works with any public ${PLATFORMS[platform].name} link.` : "Public links only."}
             </p>
           )}
         </div>
@@ -246,17 +244,17 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
 
 function ResultSkeleton() {
   return (
-    <div className="rounded-3xl border border-border bg-surface/80 p-4" role="status" aria-label="Fetching media">
+    <div className="rounded-xl border border-border bg-surface p-4" role="status" aria-label="Fetching media">
       <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-        <div className="skeleton aspect-video rounded-2xl" />
+        <div className="skeleton aspect-video rounded-lg" />
         <div className="space-y-3">
-          <div className="skeleton h-6 w-3/4 rounded-lg" />
-          <div className="skeleton h-4 w-1/3 rounded-lg" />
-          <div className="skeleton h-14 rounded-2xl" />
-          <div className="skeleton h-14 rounded-2xl" />
+          <div className="skeleton h-6 w-3/4 rounded-md" />
+          <div className="skeleton h-4 w-1/3 rounded-md" />
+          <div className="skeleton h-14 rounded-lg" />
+          <div className="skeleton h-14 rounded-lg" />
         </div>
       </div>
-      <p className="mt-3 text-center text-sm text-muted">Peeking at every quality option…</p>
+      <p className="mt-3 text-sm text-muted">Getting the available qualities…</p>
     </div>
   );
 }

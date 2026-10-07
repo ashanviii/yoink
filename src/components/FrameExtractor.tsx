@@ -180,7 +180,7 @@ export function FrameExtractor({ durationSec, preview, source, width, height, ac
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="space-y-3 rounded-2xl border border-border bg-surface-2 p-3">
+      <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
         {preview && sprite.status !== "error" && (
           <FramePreview sprite={sprite} preview={preview} at={at} duration={durationSec} aspect={aspect} active={active} />
         )}

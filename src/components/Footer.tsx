@@ -10,34 +10,34 @@ export function Footer() {
         <div className="space-y-3">
           <Logo />
           <p className="max-w-xs text-sm text-muted">
-            Save public videos & audio in the best quality available. Respect creators — only download what you have the
+            Save public videos & audio in the best quality available. Respect creators and only download what you have the
             right to use.
           </p>
         </div>
         <nav aria-label="Downloaders">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Downloaders</h2>
+          <h2 className="mb-3 text-sm font-semibold">Downloaders</h2>
           <ul className="space-y-2 text-sm">
             {LANDING_PAGES.map((page) => (
               <li key={page.slug}>
-                <Link href={`/${page.slug}`} className="transition hover:text-pop">
+                <Link href={`/${page.slug}`} className="transition hover:text-text hover:underline hover:underline-offset-4">
                   {page.navLabel}
                 </Link>
               </li>
             ))}
             <li>
-              <Link href="/download-videos-from-social-media" className="transition hover:text-pop">
+              <Link href="/download-videos-from-social-media" className="transition hover:text-text hover:underline hover:underline-offset-4">
                 Download guide
               </Link>
             </li>
           </ul>
         </nav>
         <nav aria-label="Legal">
-          <h2 className="mb-3 text-xs font-bold uppercase tracking-widest text-muted">Legal</h2>
+          <h2 className="mb-3 text-sm font-semibold">Legal</h2>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/terms" className="transition hover:text-pop">Terms of use</Link></li>
-            <li><Link href="/privacy" className="transition hover:text-pop">Privacy</Link></li>
-            <li><Link href="/copyright" className="transition hover:text-pop">Copyright & DMCA</Link></li>
-            <li><a href={`mailto:${site.email}`} className="transition hover:text-pop">Contact</a></li>
+            <li><Link href="/terms" className="transition hover:text-text hover:underline hover:underline-offset-4">Terms of use</Link></li>
+            <li><Link href="/privacy" className="transition hover:text-text hover:underline hover:underline-offset-4">Privacy</Link></li>
+            <li><Link href="/copyright" className="transition hover:text-text hover:underline hover:underline-offset-4">Copyright & DMCA</Link></li>
+            <li><a href={`mailto:${site.email}`} className="transition hover:text-text hover:underline hover:underline-offset-4">Contact</a></li>
           </ul>
         </nav>
       </div>

@@ -1,77 +1,70 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { Faq } from "@/lib/landing-pages";
 import type { PlatformId } from "@/lib/platforms";
 import { ArrowIcon, PlatformIcon } from "./icons";
 
-export function SectionHeading({ eyebrow, title, id }: { eyebrow: string; title: string; id?: string }) {
+/** A page section: heading in a narrow left column, content on the right (stacked on mobile). */
+export function Section({ title, id, children }: { title: string; id: string; children: ReactNode }) {
   return (
-    <div className="mb-8 space-y-2">
-      <p className="text-xs font-bold uppercase tracking-[0.2em] text-pop">{eyebrow}</p>
-      <h2 id={id} className="font-display text-3xl font-extrabold sm:text-4xl">
-        {title}
-      </h2>
-    </div>
+    <section aria-labelledby={id} className="mx-auto max-w-5xl px-4 pt-16 sm:pt-20">
+      <div className="grid gap-5 border-t border-border pt-6 md:grid-cols-[13rem_1fr] md:gap-10">
+        <h2 id={id} className="font-display text-2xl font-bold leading-tight">
+          {title}
+        </h2>
+        <div className="min-w-0">{children}</div>
+      </div>
+    </section>
   );
 }
 
 export function Steps({ steps }: { steps: readonly string[] }) {
   return (
-    <section aria-labelledby="how-heading" className="mx-auto max-w-5xl px-4 pt-20">
-      <SectionHeading eyebrow="How it works" title="Three taps. That's it." id="how-heading" />
-      <ol className="grid gap-4 sm:grid-cols-3">
+    <Section title="How it works" id="how-heading">
+      <ol className="grid gap-6 sm:grid-cols-3">
         {steps.map((step, i) => (
-          <li
-            key={step}
-            className="group relative rounded-3xl border border-border bg-surface p-6 transition hover:-translate-y-1 hover:shadow-card"
-          >
-            <span className="mb-4 grid size-11 place-items-center rounded-2xl bg-accent font-display text-xl font-extrabold text-accent-ink transition-transform group-hover:-rotate-6">
-              {i + 1}
-            </span>
-            <p className="text-[15px] leading-relaxed">{step}</p>
+          <li key={step}>
+            <span className="font-display text-sm font-bold text-muted tabular-nums">Step {i + 1}</span>
+            <p className="mt-1.5 text-[15px] leading-relaxed">{step}</p>
           </li>
         ))}
       </ol>
-    </section>
+    </Section>
   );
 }
 
 export function Features({ features }: { features: readonly { title: string; body: string }[] }) {
   return (
-    <section aria-labelledby="features-heading" className="mx-auto max-w-5xl px-4 pt-20">
-      <SectionHeading eyebrow="Why Yoinkit" title="Built different (fr)." id="features-heading" />
-      <div className="grid gap-4 sm:grid-cols-2">
+    <Section title="What you get" id="features-heading">
+      <dl className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
         {features.map((feature) => (
-          <div key={feature.title} className="rounded-3xl border border-border bg-surface p-6">
-            <h3 className="font-display text-xl font-bold">{feature.title}</h3>
-            <p className="mt-2 text-[15px] leading-relaxed text-muted">{feature.body}</p>
+          <div key={feature.title}>
+            <dt className="font-semibold">{feature.title}</dt>
+            <dd className="mt-1 text-[15px] leading-relaxed text-muted">{feature.body}</dd>
           </div>
         ))}
-      </div>
-    </section>
+      </dl>
+    </Section>
   );
 }
 
 export function FaqSection({ faqs }: { faqs: readonly Faq[] }) {
   return (
-    <section aria-labelledby="faq-heading" className="mx-auto max-w-3xl px-4 pt-20">
-      <SectionHeading eyebrow="FAQ" title="Questions? Answered." id="faq-heading" />
-      <div className="divide-y divide-border overflow-hidden rounded-3xl border border-border bg-surface">
-        {faqs.map((faq) => (
-          <details key={faq.q} className="group">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-5 font-semibold transition hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
-              <h3 className="text-[15px]">{faq.q}</h3>
-              <span
-                aria-hidden
-                className="grid size-7 shrink-0 place-items-center rounded-full border border-border text-lg transition-transform duration-300 group-open:rotate-45 group-open:bg-accent group-open:text-accent-ink"
-              >
+    <Section title="Questions" id="faq-heading">
+      <div className="divide-y divide-border border-b border-border">
+        {faqs.map((faq, i) => (
+          <details key={faq.q} className="group" open={i === 0}>
+            <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-4 font-semibold [&::-webkit-details-marker]:hidden">
+              <h3 className="text-[15px] group-hover:underline group-hover:underline-offset-4">{faq.q}</h3>
+              <span aria-hidden className="text-lg leading-none text-muted transition-transform group-open:rotate-45">
                 +
               </span>
             </summary>
-            <p className="px-5 pb-5 text-[15px] leading-relaxed text-muted">{faq.a}</p>
+            <p className="max-w-2xl pb-5 text-[15px] leading-relaxed text-muted">{faq.a}</p>
           </details>
         ))}
       </div>
-    </section>
+    </Section>
   );
 }
 
@@ -82,34 +75,24 @@ export interface PlatformLink {
   blurb: string;
 }
 
-export function PlatformGrid({ links, title = "Pick your platform" }: { links: PlatformLink[]; title?: string }) {
+export function PlatformGrid({ links, title = "Platforms" }: { links: PlatformLink[]; title?: string }) {
   return (
-    <section aria-labelledby="platforms-heading" className="mx-auto max-w-5xl px-4 pt-20">
-      <SectionHeading eyebrow="Supported" title={title} id="platforms-heading" />
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {links.map((link) => {
-          return (
-            <li key={link.href}>
-              <Link
-                href={link.href}
-                className="group flex h-full flex-col gap-3 rounded-3xl border border-border bg-surface p-5 transition hover:-translate-y-1 hover:border-text hover:shadow-card"
-              >
-                <PlatformIcon
-                  platform={link.platform}
-                  size={44}
-                  className="size-11 rounded-2xl transition-transform group-hover:rotate-6"
-                />
-                <span className="font-display text-lg font-bold">{link.label}</span>
-                <span className="flex-1 text-sm text-muted">{link.blurb}</span>
-                <span className="flex items-center gap-1 text-sm font-semibold">
-                  Open <ArrowIcon size={15} className="transition-transform group-hover:translate-x-1" />
-                </span>
-              </Link>
-            </li>
-          );
-        })}
+    <Section title={title} id="platforms-heading">
+      <ul className="grid gap-x-10 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+        {links.map((link) => (
+          <li key={link.href} className="border-b border-border">
+            <Link href={link.href} className="group flex items-center gap-3 py-3.5">
+              <PlatformIcon platform={link.platform} size={36} className="size-9 shrink-0 rounded-lg" />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold group-hover:underline group-hover:underline-offset-4">{link.label}</span>
+                <span className="block text-sm text-muted">{link.blurb}</span>
+              </span>
+              <ArrowIcon size={16} className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-text" />
+            </Link>
+          </li>
+        ))}
       </ul>
-    </section>
+    </Section>
   );
 }
 
@@ -123,37 +106,36 @@ export interface SupportRow {
 /** Plain-text, quotable summary of exactly what the tool does — easy for search engines and AI assistants to lift. */
 export function SupportTable({ rows }: { rows: readonly SupportRow[] }) {
   return (
-    <section aria-labelledby="support-heading" className="mx-auto max-w-5xl px-4 pt-20">
-      <SectionHeading eyebrow="At a glance" title="What Yoinkit can download" id="support-heading" />
-      <p className="mb-6 max-w-3xl text-[15px] leading-relaxed text-muted">
+    <Section title="What it can download" id="support-heading">
+      <p className="mb-6 max-w-2xl text-[15px] leading-relaxed text-muted">
         Yoinkit is a free online video downloader that works in any browser. Paste a public link from Instagram, TikTok,
         Facebook, Snapchat or Pinterest, choose a quality, and save the video as MP4 or the audio as MP3. It needs no
         account, no app and no login, and it only works with public content.
       </p>
-      <div className="overflow-x-auto rounded-3xl border border-border bg-surface">
+      <div className="overflow-x-auto">
         <table className="w-full min-w-[34rem] text-left text-sm">
           <caption className="sr-only">Supported platforms and content types</caption>
-          <thead className="bg-surface-2 text-xs uppercase tracking-widest text-muted">
+          <thead className="border-b border-border text-xs text-muted">
             <tr>
-              <th scope="col" className="p-4">Platform</th>
-              <th scope="col" className="p-4">Supported</th>
-              <th scope="col" className="p-4">Not supported</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Platform</th>
+              <th scope="col" className="py-2.5 pr-4 font-medium">Supported</th>
+              <th scope="col" className="py-2.5 font-medium">Not supported</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-border border-b border-border">
             {rows.map((row) => (
-              <tr key={row.href}>
-                <th scope="row" className="p-4 font-display font-bold">
-                  <Link href={row.href} className="underline decoration-pop underline-offset-4">{row.platform}</Link>
+              <tr key={row.href} className="align-top">
+                <th scope="row" className="py-3 pr-4 font-semibold">
+                  <Link href={row.href} className="hover:underline hover:underline-offset-4">{row.platform}</Link>
                 </th>
-                <td className="p-4">{row.supported}</td>
-                <td className="p-4 text-muted">{row.notSupported}</td>
+                <td className="py-3 pr-4">{row.supported}</td>
+                <td className="py-3 text-muted">{row.notSupported}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-    </section>
+    </Section>
   );
 }
 

@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { Hero } from "@/components/Hero";
 import { FaqSection, Features, JsonLd, PlatformGrid, Steps } from "@/components/sections";
 import { LANDING_PAGES, getLandingPage } from "@/lib/landing-pages";
-import { PLATFORMS } from "@/lib/platforms";
 import { pageMetadata } from "@/lib/seo";
 import { breadcrumbSchema, faqSchema, howToSchema, webAppSchema } from "@/lib/structured-data";
 
@@ -26,7 +25,6 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
   const page = getLandingPage(slug);
   if (!page) notFound();
 
-  const platform = PLATFORMS[page.platform];
   const path = `/${page.slug}`;
   const siblings = LANDING_PAGES.filter((p) => p.slug !== page.slug)
     .sort((a, b) => Number(b.platform === page.platform) - Number(a.platform === page.platform))
@@ -46,7 +44,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
           ]),
         ]}
       />
-      <nav aria-label="Breadcrumb" className="mx-auto max-w-3xl px-4 pt-6 text-xs text-muted">
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-5xl px-4 pt-6 text-xs text-muted">
         <ol className="flex items-center gap-1.5">
           <li>
             <Link href="/" className="hover:text-text">Yoinkit</Link>
@@ -58,9 +56,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
         </ol>
       </nav>
       <Hero
-        eyebrow={`${platform.name} downloader`}
-        title={page.h1}
-        highlight={page.highlight}
+        title={`${page.h1} ${page.highlight}`}
         subtitle={page.subtitle}
         placeholder={page.placeholder}
         platform={page.platform}

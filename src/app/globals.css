@@ -11,11 +11,9 @@
   --border: #e2ded3;
   --accent: #c6ff3d;
   --accent-ink: #0e0e11;
-  --pop: #7c5cff;
-  --hot: #ff4fa3;
-  --danger: #e5383b;
-  --ring: #7c5cff;
-  --shadow: 0 1px 0 rgb(0 0 0 / 0.04), 0 12px 32px -12px rgb(20 16 40 / 0.18);
+  --danger: #d62d30;
+  --ring: #0e0e11;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
   color-scheme: light;
 }
 
@@ -28,11 +26,9 @@
   --border: #2a2a36;
   --accent: #c6ff3d;
   --accent-ink: #0b0b0f;
-  --pop: #9b85ff;
-  --hot: #ff6cb5;
   --danger: #ff5c5f;
   --ring: #c6ff3d;
-  --shadow: 0 1px 0 rgb(255 255 255 / 0.03), 0 16px 40px -16px rgb(0 0 0 / 0.7);
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }
 
@@ -45,8 +41,6 @@
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-ink: var(--accent-ink);
-  --color-pop: var(--pop);
-  --color-hot: var(--hot);
   --color-danger: var(--danger);
   --font-sans: var(--font-body);
   --font-display: var(--font-display);
@@ -56,8 +50,6 @@
   --animate-rise: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   --animate-shimmer: shimmer 1.4s linear infinite;
   --animate-stripes: stripes 0.8s linear infinite;
-  --animate-pop: pop 0.45s cubic-bezier(0.3, 1.6, 0.5, 1);
-  --animate-float: float 6s ease-in-out infinite;
 
   @keyframes shake {
     10%, 90% { transform: translateX(-1px); }
@@ -76,14 +68,6 @@
   @keyframes stripes {
     from { background-position: 0 0; }
     to { background-position: 28px 0; }
-  }
-  @keyframes pop {
-    0% { transform: scale(0.6); opacity: 0; }
-    100% { transform: scale(1); opacity: 1; }
-  }
-  @keyframes float {
-    0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
-    50% { transform: translateY(-8px) rotate(var(--r, 0deg)); }
   }
 }
 
@@ -104,25 +88,17 @@ body {
   color: var(--accent-ink);
 }
 
-:focus-visible {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
+/* In the base layer so utilities (e.g. outline-none on an input inside a focus-styled wrapper) can override it. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
 }
 
 .font-display {
   font-family: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
   letter-spacing: -0.035em;
-}
-
-/* Hand-drawn style marker behind highlighted words */
-.marker {
-  background: linear-gradient(transparent 58%, var(--accent) 58%, var(--accent) 92%, transparent 92%);
-  padding: 0 0.12em;
-  border-radius: 0.15em;
-}
-.dark .marker {
-  background: none;
-  color: var(--accent);
 }
 
 .skeleton {
@@ -143,18 +119,6 @@ body {
   );
   background-size: 28px 28px;
   animation: var(--animate-stripes);
-}
-
-.grain::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.35;
-  background:
-    radial-gradient(60rem 30rem at 85% -10%, color-mix(in oklab, var(--pop) 22%, transparent), transparent 70%),
-    radial-gradient(50rem 26rem at -10% 10%, color-mix(in oklab, var(--accent) 26%, transparent), transparent 70%);
 }
 
 @media (prefers-reduced-motion: reduce) {

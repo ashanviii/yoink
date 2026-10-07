@@ -13,7 +13,7 @@ export interface LandingPage {
   /** Meta description — keep under ~160 chars. */
   description: string;
   keywords: string[];
-  /** H1, with `highlight` rendered in the accent style. */
+  /** The H1 is `h1` followed by `highlight`. */
   h1: string;
   highlight: string;
   subtitle: string;

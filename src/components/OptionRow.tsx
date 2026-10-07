@@ -35,7 +35,7 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
   const stage = (status === "processing" && processingLabel) || STAGE_LABEL[status] || "Working…";
 
   return (
-    <li className="relative overflow-hidden rounded-2xl border border-border bg-surface transition hover:border-text/40">
+    <li className="relative overflow-hidden rounded-lg border border-border bg-surface transition hover:border-text/40">
       {busy && (
         <div
           className="progress-stripes absolute inset-y-0 left-0 bg-accent/70 transition-[width] duration-500 ease-out"
@@ -46,14 +46,14 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
       <div className="relative flex items-center gap-3 p-3 pl-4">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-lg font-bold">{label}</span>
+            <span className="text-base font-semibold">{label}</span>
             {best && (
-              <span className="rounded-full bg-pop px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
+              <span className="rounded bg-text px-1.5 py-0.5 text-[11px] font-semibold text-bg">
                 Best
               </span>
             )}
             {badges.map((badge) => (
-              <span key={badge} className="rounded-full border border-border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted">
+              <span key={badge} className="rounded border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">
                 {badge}
               </span>
             ))}
@@ -64,7 +64,7 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
               : state.phase === "error"
                 ? <span className="text-danger">{state.error}</span>
                 : state.phase === "ready"
-                  ? `Saved${size ? ` · ${size}` : ""} — check your downloads`
+                  ? `Saved${size ? ` · ${size}` : ""}. Check your downloads.`
                   : [detail, size].filter(Boolean).join(" · ")}
           </p>
         </div>
@@ -73,7 +73,7 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
           <button
             type="button"
             onClick={saveAgain}
-            className="flex shrink-0 animate-pop items-center gap-1.5 rounded-full bg-accent px-4 py-2.5 text-sm font-bold text-accent-ink active:scale-95"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink"
           >
             <CheckIcon size={16} /> Save again
           </button>
@@ -83,7 +83,7 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
             onClick={start}
             disabled={busy}
             aria-label={`Download ${label} ${action}`}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-text px-4 py-2.5 text-sm font-bold text-bg transition hover:-translate-y-0.5 hover:shadow-[0_4px_0_0_var(--pop)] active:translate-y-0 active:scale-95 active:shadow-none disabled:cursor-wait disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-none"
+            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-text px-4 py-2.5 text-sm font-semibold text-bg transition hover:opacity-85 disabled:cursor-wait disabled:opacity-70"
           >
             {busy ? (
               <span className="size-4 animate-spin rounded-full border-2 border-bg/30 border-t-bg" aria-hidden />

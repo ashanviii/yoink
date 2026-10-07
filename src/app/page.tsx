@@ -17,7 +17,7 @@ import { faqSchema, howToSchema, organizationSchema, webAppSchema, websiteSchema
 
 const STEPS = [
   "Copy the link to any public reel, story, TikTok, Facebook video, Spotlight snap or pin.",
-  "Paste it into Yoinkit — we auto-detect the platform and fetch every quality option.",
+  "Paste it into Yoinkit. We detect the platform and list every quality it has.",
   "Pick a resolution or MP3 and the file lands straight on your device.",
 ];
 
@@ -57,32 +57,20 @@ export default function Home() {
         ]}
       />
       <Hero
-        eyebrow="Instagram · TikTok · Facebook · Snapchat · Pinterest"
-        title="Yoink any video in"
-        highlight="max quality"
-        subtitle="Paste a link. Pick a quality. Trim if you like. Reels, TikToks, Facebook videos, Spotlight snaps and Pins — no watermark, no app, no login."
+        title="Yoink any video in max quality"
+        subtitle="Paste a public link from Instagram, TikTok, Facebook, Snapchat or Pinterest. Pick a quality, trim it if you want, and save it. No watermark, and nothing to install."
       />
       <PlatformGrid links={PLATFORM_LINKS} />
       <SupportTable rows={SUPPORT_ROWS} />
-      <section aria-labelledby="guide-heading" className="mx-auto max-w-5xl px-4 pt-6">
+      <div className="mx-auto max-w-5xl px-4 pt-6 md:pl-[calc(13rem+2.5rem+1rem)]">
         <Link
           href="/download-videos-from-social-media"
-          className="group flex flex-col gap-2 rounded-3xl border border-border bg-surface p-6 transition hover:-translate-y-1 hover:border-text hover:shadow-card sm:flex-row sm:items-center sm:justify-between"
+          className="group inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-text"
         >
-          <span>
-            <span id="guide-heading" className="block font-display text-xl font-bold">
-              The best way to download videos from Instagram, TikTok, Facebook, Snapchat &amp; Pinterest
-            </span>
-            <span className="mt-1 block text-sm text-muted">
-              What works on each platform, how to pick a safe downloader, and step-by-step instructions for iPhone, Android
-              and desktop.
-            </span>
-          </span>
-          <span className="flex shrink-0 items-center gap-1 text-sm font-semibold">
-            Read the guide <ArrowIcon size={15} className="transition-transform group-hover:translate-x-1" />
-          </span>
+          Read the full guide to downloading from each platform, on iPhone, Android and desktop
+          <ArrowIcon size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
-      </section>
+      </div>
       <Steps steps={STEPS} />
       <Features features={FEATURES} />
       <FaqSection faqs={HOME_FAQS} />
