@@ -6,6 +6,7 @@ import type { MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
 import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
+import { PreviewPlayer } from "./PreviewPlayer";
 import { TrimEditor } from "./TrimEditor";
 
 type Tab = OptionKind | "frames";
@@ -60,6 +61,8 @@ export function ResultCard({ item, uploader, index, total }: Props) {
               {index + 1}/{total}
             </span>
           )}
+          {/* Last, so a playing video covers the badges instead of fighting its controls. */}
+          {kinds.includes("video") && <PreviewPlayer preview={item.preview} />}
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
