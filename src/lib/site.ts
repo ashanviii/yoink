@@ -1,8 +1,8 @@
 export const site = {
   name: "Yoinkit",
-  tagline: "Save reels, snaps & vids in max quality",
+  tagline: "Yoink exactly the part you want",
   description:
-    "Yoinkit is a free, fast video downloader for Instagram Reels & Stories, TikTok (no watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest. Paste a link, trim if you like, download.",
+    "Free video downloader and editor for Instagram, TikTok, Facebook, Snapchat and Pinterest. Trim, crop and save just the part you want as MP4, GIF or MP3.",
   email: "ashanviy@gmail.com",
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
 } as const;

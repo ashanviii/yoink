@@ -10,8 +10,8 @@ export function Footer() {
         <div className="space-y-3">
           <Logo />
           <p className="max-w-xs text-sm text-muted">
-            Save public videos & audio in the best quality available. Respect creators and only download what you have the
-            right to use.
+            Get exactly the part of a video you want, right from your phone. Respect creators and only download what you
+            have the right to use.
           </p>
         </div>
         <nav aria-label="Downloaders">

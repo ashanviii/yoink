@@ -1,11 +1,11 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "Yoinkit — save reels, snaps & vids in max quality";
+export const alt = "Yoinkit — yoink exactly the part you want";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-const PILLS = ["Instagram", "TikTok", "Facebook", "Snapchat", "Pinterest"];
+const PILLS = ["Trim", "Crop", "GIF", "MP4", "MP3"];
 
 export default function OpengraphImage() {
   return new ImageResponse(
@@ -27,9 +27,9 @@ export default function OpengraphImage() {
           <div style={{ fontSize: 56, fontWeight: 800 }}>Yoinkit</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Yoink any video in</div>
+          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Yoink exactly</div>
           <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: "#c6ff3d" }}>
-            max quality.
+            the part you want.
           </div>
         </div>
         <div style={{ display: "flex", gap: 16 }}>

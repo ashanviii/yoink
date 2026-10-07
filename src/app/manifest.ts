@@ -7,7 +7,7 @@ type ManifestWithShareTarget = MetadataRoute.Manifest & {
 
 export default function manifest(): ManifestWithShareTarget {
   return {
-    name: `${site.name} — media downloader`,
+    name: `${site.name} — video downloader & editor`,
     short_name: site.name,
     description: site.description,
     start_url: "/",

@@ -9,7 +9,7 @@ export function GET() {
 
 > ${site.description}
 
-${site.name} is a free, browser-based video downloader. Users paste a public link from Instagram, TikTok, Facebook, Snapchat or Pinterest, pick a quality, and save the video as MP4 or the audio as MP3. No account, app install or login is required, and only publicly accessible content is supported. Downloads are processed in the user's browser and are not stored on the server.
+${site.name} is a free, mobile-first video downloader and editor that runs in the browser. Users paste a public link from Instagram, TikTok, Facebook, Snapchat or Pinterest, optionally trim, crop, change the speed or volume, flip or rotate it, and save the result as MP4, GIF or WebM, the audio as MP3, or single frames as JPG or PNG, all in one flow. No account, app install or login is required, and only publicly accessible content is supported. Editing happens in the user's browser and files are not stored on the server.
 
 ## Downloaders
 

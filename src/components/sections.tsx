@@ -108,9 +108,10 @@ export function SupportTable({ rows }: { rows: readonly SupportRow[] }) {
   return (
     <Section title="What it can download" id="support-heading">
       <p className="mb-6 max-w-2xl text-[15px] leading-relaxed text-muted">
-        Yoinkit is a free online video downloader that works in any browser. Paste a public link from Instagram, TikTok,
-        Facebook, Snapchat or Pinterest, choose a quality, and save the video as MP4 or the audio as MP3. It needs no
-        account, no app and no login, and it only works with public content.
+        Yoinkit is a free video downloader and editor that works in any browser, built for phones first. Paste a public
+        link from Instagram, TikTok, Facebook, Snapchat or Pinterest, trim or crop it if you like, and save it as MP4, GIF
+        or WebM, the sound as MP3, or a frame as JPG or PNG. It needs no account, no app and no login, and it only works
+        with public content.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[34rem] text-left text-sm">

@@ -16,16 +16,32 @@ import { site } from "@/lib/site";
 import { faqSchema, howToSchema, organizationSchema, webAppSchema, websiteSchema } from "@/lib/structured-data";
 
 const STEPS = [
-  "Copy the link to any public reel, story, TikTok, Facebook video, Spotlight snap or pin.",
-  "Paste it into Yoinkit. We detect the platform and list every quality it has.",
-  "Pick a resolution or MP3 and the file lands straight on your device.",
+  "Paste the link. Copy it from Instagram, TikTok, Facebook, Snapchat or Pinterest and drop it in the box.",
+  "Pick the part. Trim to the moment, crop to the shape you need, and change the speed or volume if you like. Or skip all of it.",
+  "Save it your way: a video, a GIF, just the sound, or a single frame. It goes straight to your phone.",
 ];
 
 const FEATURES = [
-  { title: "Max quality, always", body: "We list every resolution the platform has and merge video with the best audio track." },
-  { title: "No watermarks", body: "TikTok's watermarked copy is filtered out. You get the clean stream, as uploaded." },
-  { title: "MP3 in one tap", body: "Rip just the audio from any video as MP3, or grab the untouched original as M4A." },
-  { title: "Private by default", body: "No accounts, no logins, no link history. Downloads are processed in your browser, never stored on our servers." },
+  {
+    title: "Just the part you want",
+    body: "Trim to the second on a filmstrip and crop to 9:16, 1:1, 4:5 or 16:9, so you only keep the bit worth keeping.",
+  },
+  {
+    title: "Made for your phone",
+    body: "Everything happens on one screen with taps and drags. Nothing to install, and it works just as well on a laptop.",
+  },
+  {
+    title: "Every format in one place",
+    body: "Save as MP4, GIF or WebM, pull the sound out as MP3, or grab a single frame as JPG or PNG. No second app to convert it.",
+  },
+  {
+    title: "Clean and full quality",
+    body: "TikTok's watermarked copy is skipped, and you get the highest quality each platform offers.",
+  },
+  {
+    title: "Nothing to sign up for",
+    body: "No account and no login. Edits happen in your browser and files go straight to your device. We never keep a copy.",
+  },
 ];
 
 const PLATFORM_LINKS: PlatformLink[] = [
@@ -52,14 +68,16 @@ export default function Home() {
           websiteSchema(),
           organizationSchema(),
           webAppSchema({ name: site.name, description: site.description, path: "/" }),
-          howToSchema("How to download videos with Yoinkit", STEPS),
+          howToSchema("How to save just the part of a video you want with Yoinkit", STEPS),
           faqSchema(HOME_FAQS),
         ]}
       />
       <Hero
-        title="Yoink any video in max quality"
-        subtitle="Paste a public link from Instagram, TikTok, Facebook, Snapchat or Pinterest. Pick a quality, trim it if you want, and save it. No watermark, and nothing to install."
+        title="Yoink exactly the part you want"
+        subtitle="Paste a Reel, TikTok, Facebook video, Snap or Pin. Trim it, crop it, speed it up, then save it as a video, GIF, sound or still. All on one screen, made for your phone."
       />
+      <Steps steps={STEPS} />
+      <Features features={FEATURES} />
       <PlatformGrid links={PLATFORM_LINKS} />
       <SupportTable rows={SUPPORT_ROWS} />
       <div className="mx-auto max-w-5xl px-4 pt-6 md:pl-[calc(13rem+2.5rem+1rem)]">
@@ -71,8 +89,6 @@ export default function Home() {
           <ArrowIcon size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
-      <Steps steps={STEPS} />
-      <Features features={FEATURES} />
       <FaqSection faqs={HOME_FAQS} />
     </>
   );

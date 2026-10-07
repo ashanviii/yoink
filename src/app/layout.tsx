@@ -21,7 +21,7 @@ const body = Geist({
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} — Instagram, TikTok & Facebook Video Downloader`,
+    default: `${site.name} — Video Downloader & Editor for Reels, TikTok and More`,
     template: `%s`,
   },
   description: site.description,
@@ -33,19 +33,22 @@ export const metadata: Metadata = {
     "facebook video downloader",
     "snapchat spotlight downloader",
     "pinterest video downloader",
+    "trim instagram reel",
+    "video to gif",
+    "crop video online",
   ],
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: site.name,
     url: "/",
-    title: `${site.name} — save reels, snaps & vids in max quality`,
+    title: `${site.name} — yoink exactly the part you want`,
     description: site.description,
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: `${site.name} — save reels, snaps & vids in max quality`,
+    title: `${site.name} — yoink exactly the part you want`,
     description: site.description,
   },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large" } },

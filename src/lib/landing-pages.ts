@@ -251,8 +251,10 @@ export function getLandingPage(slug: string): LandingPage | undefined {
 
 export const HOME_FAQS: Faq[] = [
   { q: "Is Yoinkit free?", a: "Yes. Yoinkit is free to use with a fair-use rate limit to keep things fast for everyone." },
+  { q: "Can I save just part of a video?", a: "Yes. Tick Trim, drag the handles to the moment you want and download. You can also crop it, change the speed or volume, flip or rotate it before saving. Each edit is optional." },
+  { q: "Can I turn a Reel or TikTok into a GIF?", a: "Yes. Trim it to 15 seconds or less, then pick GIF under Other formats. Any crop, speed, flip or rotation you set is applied to the GIF too." },
   { q: "Which sites does Yoinkit support?", a: "Instagram (Reels, Stories, video posts & carousels), TikTok (without watermark), Facebook videos & Reels, Snapchat Spotlight and Pinterest videos." },
-  { q: "Do I need to install an app or sign in?", a: "No. Yoinkit runs in your browser on any phone, tablet or computer, and never asks for your social media logins." },
+  { q: "Does it work on my phone?", a: "Yes, it's built for phones first. Everything runs in your browser on iPhone and Android, with no app to install and no social media login needed. It works on computers too." },
   { q: "What quality will I get?", a: "The highest quality the platform makes available, and you can always pick a smaller file instead." },
   { q: "Do you keep copies of my downloads?", a: "No. Downloads are processed in your browser and saved straight to your device, so they're never stored on our servers. We don't keep a history of links." },
   { q: "Can I download private content?", a: "No. Yoinkit only works with publicly accessible posts. Please respect creators and only download content you have the right to use." },
