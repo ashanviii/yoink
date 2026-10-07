@@ -1,7 +1,7 @@
 "use client";
 
 import { formatBytes } from "@/lib/format";
-import type { DownloadRecipe, JobParams, MediaOption, TrimParams } from "@/lib/media-types";
+import type { DownloadRecipe, JobParams, MediaOption } from "@/lib/media-types";
 import { AlertIcon, CheckIcon, DownloadIcon, RetryIcon } from "./icons";
 import { useDownloadJob } from "./useDownloadJob";
 
@@ -102,11 +102,13 @@ export function JobRow({ recipe, params, label, action, detail, badges = [], bes
   );
 }
 
-export function OptionRow({ option, trim }: { option: MediaOption; trim?: TrimParams }) {
+/** `edits` holds the video's trim and crop, if any. */
+export function OptionRow({ option, edits }: { option: MediaOption; edits?: Pick<JobParams, "trim" | "crop"> }) {
+  const params = edits?.trim || edits?.crop ? { trim: edits.trim, crop: edits.crop } : undefined;
   return (
     <JobRow
       recipe={option.recipe}
-      params={trim ? { trim } : undefined}
+      params={params}
       label={option.label}
       action={option.ext.toUpperCase()}
       detail={option.detail}

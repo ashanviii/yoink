@@ -9,6 +9,16 @@ export interface TrimParams {
   end: number;   // seconds
 }
 
+/** Region of the frame to keep, each value a fraction (0–1) of the frame's width or height. */
+export interface CropParams {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Locked output shape (width / height in pixels), e.g. 1 for square. Free-form when absent. */
+  ratio?: number;
+}
+
 export type FrameFormat = "jpg" | "png";
 
 /** Still images pulled from the video: one frame at a timestamp, or one every `every` seconds (zipped). */
@@ -19,9 +29,10 @@ export type FrameParams =
 /** Cap on images in one frame-set ZIP. */
 export const MAX_EXTRACT_FRAMES = 120;
 
-/** Extra processing for a download; at most one of these applies. */
+/** Extra processing for a download: trim and/or crop a video, or pull frames from it. */
 export interface JobParams {
   trim?: TrimParams;
+  crop?: CropParams;
   frames?: FrameParams;
 }
 

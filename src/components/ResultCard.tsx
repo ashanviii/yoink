@@ -2,7 +2,8 @@
 
 import { useId, useState } from "react";
 import { formatDuration } from "@/lib/format";
-import type { MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
+import type { CropParams, MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
+import { CropEditor } from "./CropEditor";
 import { FrameExtractor } from "./FrameExtractor";
 import { FilmIcon, ImageIcon, MusicIcon } from "./icons";
 import { OptionRow } from "./OptionRow";
@@ -24,6 +25,7 @@ interface Props {
 export function ResultCard({ item, uploader, index, total }: Props) {
   const [tab, setTab] = useState<Tab>("video");
   const [trimParams, setTrimParams] = useState<TrimParams | undefined>();
+  const [cropParams, setCropParams] = useState<CropParams | undefined>();
   const tabsId = useId();
   const kinds = (["video", "audio"] as const).filter((kind) => item.options.some((o) => o.kind === kind));
   const bestVideo = item.options.find((o) => o.kind === "video" && o.best) ?? item.options.find((o) => o.kind === "video");
@@ -98,8 +100,15 @@ export function ResultCard({ item, uploader, index, total }: Props) {
 
           {/* Trim editor for video only */}
           {kinds.includes("video") && (item.durationSec ?? 0) > 1 && (
-            <div hidden={active !== "video"}>
+            <div hidden={active !== "video"} className="space-y-2">
               <TrimEditor durationSec={item.durationSec!} preview={item.preview} onTrimChange={setTrimParams} />
+              <CropEditor
+                durationSec={item.durationSec!}
+                preview={item.preview}
+                width={item.width}
+                height={item.height}
+                onCropChange={setCropParams}
+              />
             </div>
           )}
 
@@ -116,7 +125,11 @@ export function ResultCard({ item, uploader, index, total }: Props) {
               {item.options
                 .filter((o) => o.kind === kind)
                 .map((option) => (
-                  <OptionRow key={`${option.kind}-${option.label}`} option={option} trim={kind === "video" ? trimParams : undefined} />
+                  <OptionRow
+                    key={`${option.kind}-${option.label}`}
+                    option={option}
+                    edits={kind === "video" ? { trim: trimParams, crop: cropParams } : undefined}
+                  />
                 ))}
             </ul>
           ))}

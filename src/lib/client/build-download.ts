@@ -1,5 +1,5 @@
 import { ApiError } from "@/lib/api-client";
-import { MAX_EXTRACT_FRAMES, type DownloadRecipe, type FrameFormat, type JobParams, type JobStatus, type StreamRef } from "@/lib/media-types";
+import { MAX_EXTRACT_FRAMES, type CropParams, type DownloadRecipe, type FrameFormat, type JobParams, type JobStatus, type StreamRef } from "@/lib/media-types";
 import { zipBlob } from "@/lib/zip";
 import { fetchStream, type FetchedMedia } from "./fetch-media";
 import { preloadFFmpeg, withFFmpeg, type FFmpegJob } from "./ffmpeg";
@@ -131,13 +131,26 @@ async function frameSet(job: FFmpegJob, video: string, every: number, format: Fr
   return zipBlob(entries);
 }
 
-function trimArgs(inputs: string[], start: number, end: number, out: string): string[] {
-  const seekInputs = inputs.flatMap((input) => ["-ss", start.toFixed(3), "-i", input]);
+/**
+ * libx264 needs even dimensions, so the crop size is rounded down to a multiple of 2. A locked
+ * shape derives the height from the width, since each quality's frame size can differ slightly.
+ */
+function cropFilter({ x, y, w, h, ratio }: CropParams): string {
+  const f = (n: number) => n.toFixed(4);
+  // "\," escapes the comma inside min() from the filtergraph parser; ffmpeg clamps x/y to fit.
+  const height = ratio ? `min(trunc(ow/${ratio.toFixed(6)}/2)*2\\,trunc(ih/2)*2)` : `trunc(ih*${f(h)}/2)*2`;
+  return `crop=trunc(iw*${f(w)}/2)*2:${height}:trunc(iw*${f(x)}):trunc(ih*${f(y)})`;
+}
+
+/** Re-encodes the video, keeping only the trimmed range and/or cropped region. */
+function editArgs(inputs: string[], params: JobParams, out: string): string[] {
+  const { trim, crop } = params;
   // Re-encode only the kept range: stream copy would snap cuts to keyframes, often seconds apart.
+  const seek = trim ? ["-ss", trim.start.toFixed(3)] : [];
   return [
-    ...seekInputs,
-    "-t",
-    (end - start).toFixed(3),
+    ...inputs.flatMap((input) => [...seek, "-i", input]),
+    ...(trim ? ["-t", (trim.end - trim.start).toFixed(3)] : []),
+    ...(crop ? ["-vf", cropFilter(crop)] : []),
     "-map",
     "0:v:0",
     "-map",
@@ -163,7 +176,7 @@ function trimArgs(inputs: string[], start: number, end: number, out: string): st
 
 /** A single MP4 that needs no trim is already the file: save it as fetched. */
 function savesAsIs(recipe: DownloadRecipe, fetched: FetchedMedia[], params: JobParams): boolean {
-  return recipe.mode === "video" && !params.trim && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
+  return recipe.mode === "video" && !params.trim && !params.crop && !params.frames && fetched.length === 1 && fetched[0].ext === "mp4";
 }
 
 /** ffmpeg args turning the fetched inputs into the requested file. */
@@ -174,7 +187,7 @@ function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams
   if (recipe.mode === "audio-m4a") {
     return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "copy", ...metadataArgs(recipe.meta), "-movflags", "+faststart", "-y", out];
   }
-  if (params.trim) return trimArgs(inputs, params.trim.start, params.trim.end, out);
+  if (params.trim || params.crop) return editArgs(inputs, params, out);
   if (inputs.length > 1) {
     return ["-i", inputs[0], "-i", inputs[1], "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", "-y", out];
   }
@@ -187,8 +200,9 @@ function fileName(recipe: DownloadRecipe, params: JobParams, ext: string): strin
   let suffix = label;
   if (params.frames) {
     suffix = params.frames.mode === "single" ? `-frame-${params.frames.at.toFixed(2)}s` : `-frames-every-${params.frames.every}s`;
-  } else if (params.trim) {
-    suffix = `${label}-clip`;
+  } else {
+    if (params.trim) suffix += "-clip";
+    if (params.crop) suffix += "-cropped";
   }
   return `${recipe.stem}${suffix}.${ext}`;
 }
@@ -228,7 +242,7 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
   try {
     // Frames only need the picture.
     const streams = params.frames ? recipe.streams.slice(0, 1) : recipe.streams;
-    const mayProcess = !!params.frames || !!params.trim || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
+    const mayProcess = !!params.frames || !!params.trim || !!params.crop || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
     if (mayProcess) preloadFFmpeg(); // loads while the media downloads
 
     report({ status: "downloading", progress: 0 });
