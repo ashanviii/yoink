@@ -5,11 +5,10 @@ import { Hero } from "@/components/Hero";
 import { FaqSection, Features, JsonLd, PlatformGrid, Steps } from "@/components/sections";
 import { LANDING_PAGES, getLandingPage } from "@/lib/landing-pages";
 import { PLATFORMS } from "@/lib/platforms";
+import { pageMetadata } from "@/lib/seo";
 import { breadcrumbSchema, faqSchema, howToSchema, webAppSchema } from "@/lib/structured-data";
 
 export const dynamicParams = false;
-
-const OG_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt: "yoink media downloader" };
 
 export function generateStaticParams() {
   return LANDING_PAGES.map((page) => ({ slug: page.slug }));
@@ -19,16 +18,7 @@ export async function generateMetadata(props: PageProps<"/[slug]">): Promise<Met
   const { slug } = await props.params;
   const page = getLandingPage(slug);
   if (!page) return {};
-  const path = `/${page.slug}`;
-  return {
-    title: page.title,
-    description: page.description,
-    keywords: page.keywords,
-    alternates: { canonical: path },
-    // A page-level openGraph object replaces the root one, so re-attach the shared image.
-    openGraph: { type: "website", url: path, title: page.title, description: page.description, images: [OG_IMAGE] },
-    twitter: { card: "summary_large_image", title: page.title, description: page.description, images: [OG_IMAGE.url] },
-  };
+  return pageMetadata({ title: page.title, description: page.description, path: `/${page.slug}`, keywords: page.keywords });
 }
 
 export default async function LandingPage(props: PageProps<"/[slug]">) {
@@ -51,7 +41,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
           howToSchema(`How to use the ${page.navLabel} downloader`, page.steps),
           faqSchema(page.faqs),
           breadcrumbSchema([
-            { name: "yoink", path: "/" },
+            { name: "Yoinkit", path: "/" },
             { name: page.navLabel, path },
           ]),
         ]}
@@ -59,7 +49,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
       <nav aria-label="Breadcrumb" className="mx-auto max-w-3xl px-4 pt-6 text-xs text-muted">
         <ol className="flex items-center gap-1.5">
           <li>
-            <Link href="/" className="hover:text-text">yoink</Link>
+            <Link href="/" className="hover:text-text">Yoinkit</Link>
           </li>
           <li aria-hidden>/</li>
           <li aria-current="page" className="font-semibold text-text">

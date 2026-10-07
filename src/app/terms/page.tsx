@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalPage } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: `Terms of Use | ${site.name}`,
   description: `The rules for using ${site.name}: personal use, public content only, and respect for creators' rights.`,
-  alternates: { canonical: "/terms" },
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (
@@ -15,7 +16,7 @@ export default function TermsPage() {
       <p>
         By using {site.name} you agree to these terms. If you don&apos;t agree, please don&apos;t use the service.
       </p>
-      <h2>What yoink does</h2>
+      <h2>What Yoinkit does</h2>
       <p>
         {site.name} is a tool that fetches publicly accessible media from a link you provide and converts it into a file
         you can save. We don&apos;t host, index, or curate any content, and we can&apos;t access private posts.

@@ -13,6 +13,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly" as const,
       priority: 0.9,
     })),
+    { url: absoluteUrl("/download-videos-from-social-media"), lastModified: LAST_MODIFIED, changeFrequency: "monthly" as const, priority: 0.8 },
     ...["/terms", "/privacy", "/copyright"].map((path) => ({
       url: absoluteUrl(path),
       lastModified: LAST_MODIFIED,

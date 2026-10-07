@@ -58,5 +58,17 @@ export function websiteSchema() {
     name: site.name,
     url: site.url,
     description: site.description,
+    inLanguage: "en",
+  };
+}
+
+export function organizationSchema() {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: site.name,
+    url: site.url,
+    logo: absoluteUrl("/apple-icon"),
+    description: site.description,
   };
 }

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "yoink — save reels, snaps & vids in max quality";
+export const alt = "Yoinkit — save reels, snaps & vids in max quality";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -24,7 +24,7 @@ export default function OpengraphImage() {
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <BrandMark size={72} radius={20} glyph={48} />
-          <div style={{ fontSize: 56, fontWeight: 800 }}>yoink</div>
+          <div style={{ fontSize: 56, fontWeight: 800 }}>Yoinkit</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Yoink any video in</div>

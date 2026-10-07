@@ -23,6 +23,11 @@ export function Footer() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/download-videos-from-social-media" className="transition hover:text-pop">
+                Download guide
+              </Link>
+            </li>
           </ul>
         </nav>
         <nav aria-label="Legal">
@@ -35,7 +40,7 @@ export function Footer() {
         </nav>
       </div>
       <p className="mx-auto max-w-5xl px-4 pb-10 text-xs text-muted">
-        yoink is not affiliated with Instagram, Facebook, Meta, TikTok, ByteDance, Snapchat, Snap Inc. or Pinterest. All trademarks belong
+        Yoinkit is not affiliated with Instagram, Facebook, Meta, TikTok, ByteDance, Snapchat, Snap Inc. or Pinterest. All trademarks belong
         to their owners.
       </p>
     </footer>

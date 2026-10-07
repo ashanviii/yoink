@@ -38,7 +38,7 @@ export function Steps({ steps }: { steps: readonly string[] }) {
 export function Features({ features }: { features: readonly { title: string; body: string }[] }) {
   return (
     <section aria-labelledby="features-heading" className="mx-auto max-w-5xl px-4 pt-20">
-      <SectionHeading eyebrow="Why yoink" title="Built different (fr)." id="features-heading" />
+      <SectionHeading eyebrow="Why Yoinkit" title="Built different (fr)." id="features-heading" />
       <div className="grid gap-4 sm:grid-cols-2">
         {features.map((feature) => (
           <div key={feature.title} className="rounded-3xl border border-border bg-surface p-6">
@@ -109,6 +109,50 @@ export function PlatformGrid({ links, title = "Pick your platform" }: { links: P
           );
         })}
       </ul>
+    </section>
+  );
+}
+
+export interface SupportRow {
+  href: string;
+  platform: string;
+  supported: string;
+  notSupported: string;
+}
+
+/** Plain-text, quotable summary of exactly what the tool does — easy for search engines and AI assistants to lift. */
+export function SupportTable({ rows }: { rows: readonly SupportRow[] }) {
+  return (
+    <section aria-labelledby="support-heading" className="mx-auto max-w-5xl px-4 pt-20">
+      <SectionHeading eyebrow="At a glance" title="What Yoinkit can download" id="support-heading" />
+      <p className="mb-6 max-w-3xl text-[15px] leading-relaxed text-muted">
+        Yoinkit is a free online video downloader that works in any browser. Paste a public link from Instagram, TikTok,
+        Facebook, Snapchat or Pinterest, choose a quality, and save the video as MP4 or the audio as MP3. It needs no
+        account, no app and no login, and it only works with public content.
+      </p>
+      <div className="overflow-x-auto rounded-3xl border border-border bg-surface">
+        <table className="w-full min-w-[34rem] text-left text-sm">
+          <caption className="sr-only">Supported platforms and content types</caption>
+          <thead className="bg-surface-2 text-xs uppercase tracking-widest text-muted">
+            <tr>
+              <th scope="col" className="p-4">Platform</th>
+              <th scope="col" className="p-4">Supported</th>
+              <th scope="col" className="p-4">Not supported</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {rows.map((row) => (
+              <tr key={row.href}>
+                <th scope="row" className="p-4 font-display font-bold">
+                  <Link href={row.href} className="underline decoration-pop underline-offset-4">{row.platform}</Link>
+                </th>
+                <td className="p-4">{row.supported}</td>
+                <td className="p-4 text-muted">{row.notSupported}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 }

@@ -1,12 +1,12 @@
-# Deploying yoink
+# Deploying Yoinkit
 
-This gets yoink live on any Linux server with automatic HTTPS, using Docker Compose and Caddy. Budget about 20–30 minutes the first time.
+This gets Yoinkit live on any Linux server with automatic HTTPS, using Docker Compose and Caddy. Budget about 20–30 minutes the first time.
 
 **You need:**
 - A Linux server (VPS) with a public IP, Ubuntu 22.04 or newer recommended, and SSH access. x86_64 and ARM64 both work.
 - A domain name you control.
 
-yoink's server only resolves links and relays some media (videos are processed in each visitor's browser), so a small server is enough: 1–2 vCPUs and 2 GB RAM is a fine start.
+Yoinkit's server only resolves links and relays some media (videos are processed in each visitor's browser), so a small server is enough: 1–2 vCPUs and 2 GB RAM is a fine start.
 
 > **Region matters.** Some platforms block certain countries. If you're in India, pick a server **outside India**, because TikTok is blocked from Indian IPs, including servers there.
 

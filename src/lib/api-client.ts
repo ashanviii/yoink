@@ -12,7 +12,7 @@ export class ApiError extends Error {
   }
 }
 
-export const NETWORK_ERROR = "Can't reach yoink right now — check your connection and try again.";
+export const NETWORK_ERROR = "Can't reach Yoinkit right now — check your connection and try again.";
 
 /** Turns one of our API's error responses into an ApiError. */
 export async function errorFromResponse(response: Response): Promise<ApiError> {

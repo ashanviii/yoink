@@ -1,4 +1,4 @@
-# yoink
+# Yoinkit
 
 A fast, secure media downloader for **Instagram** (Reels, Stories, video posts, carousels), **TikTok** (no watermark), **Facebook** (videos, Reels), **Snapchat** (Spotlight) and **Pinterest** videos.
 
@@ -53,7 +53,7 @@ npm run dev
 
 ### Option 1: Docker Compose (Recommended for production)
 
-Deploys yoink + Caddy (automatic HTTPS) with one command.
+Deploys Yoinkit + Caddy (automatic HTTPS) with one command.
 
 **Prerequisites:**
 - Docker + Docker Compose installed
@@ -74,7 +74,7 @@ docker compose up -d --build
 Check status:
 ```bash
 docker compose ps
-docker compose logs -f yoink  # Watch yoink startup
+docker compose logs -f yoink  # Watch Yoinkit startup
 ```
 
 Visit `https://YOUR_DOMAIN` 🎉
@@ -83,7 +83,7 @@ The container updates yt-dlp on every start. For a full first-time walkthrough (
 
 ### Option 2: Docker (standalone)
 
-Run just the yoink container without Caddy:
+Run just the Yoinkit container without Caddy:
 
 ```bash
 docker build -t yoink .
@@ -323,7 +323,7 @@ All requests are rate-limited per client IP.
 ## ⚠️ Known Limitations
 
 - **Instagram Stories:** most need a login. Without `YTDLP_COOKIES_FILE` they return a clear "login required" error. Supplying an account's cookies may breach Instagram's terms — operator's call.
-- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; yoink is video only.
+- **Photo posts** (Instagram images, TikTok slideshows, image pins) aren't supported; Yoinkit is video only.
 - **Regional blocks:** if a platform is blocked where the server runs (e.g. TikTok in India), set `YTDLP_PROXY`.
 - **Per-instance limits:** rate limits and the resolve cache live in memory.
 - **Serverless won't work** (e.g. Vercel functions): needs a long-running Node server with yt-dlp.

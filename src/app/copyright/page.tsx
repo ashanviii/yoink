@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { LegalPage } from "@/components/LegalPage";
+import { pageMetadata } from "@/lib/seo";
 import { site } from "@/lib/site";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = pageMetadata({
   title: `Copyright & DMCA Policy | ${site.name}`,
   description: `How ${site.name} respects copyright and where rights holders can report infringing content.`,
-  alternates: { canonical: "/copyright" },
-};
+  path: "/copyright",
+});
 
 export default function CopyrightPage() {
   return (

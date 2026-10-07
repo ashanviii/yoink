@@ -21,7 +21,7 @@ const body = Geist({
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
   title: {
-    default: `${site.name} — Instagram, TikTok, Facebook, Snapchat & Pinterest Downloader`,
+    default: `${site.name} — Instagram, TikTok & Facebook Video Downloader`,
     template: `%s`,
   },
   description: site.description,
