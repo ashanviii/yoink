@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { Hero } from "@/components/Hero";
+import { ArrowIcon } from "@/components/icons";
 import {
   FaqSection,
   Features,
@@ -62,6 +64,25 @@ export default function Home() {
       />
       <PlatformGrid links={PLATFORM_LINKS} />
       <SupportTable rows={SUPPORT_ROWS} />
+      <section aria-labelledby="guide-heading" className="mx-auto max-w-5xl px-4 pt-6">
+        <Link
+          href="/download-videos-from-social-media"
+          className="group flex flex-col gap-2 rounded-3xl border border-border bg-surface p-6 transition hover:-translate-y-1 hover:border-text hover:shadow-card sm:flex-row sm:items-center sm:justify-between"
+        >
+          <span>
+            <span id="guide-heading" className="block font-display text-xl font-bold">
+              The best way to download videos from Instagram, TikTok, Facebook, Snapchat &amp; Pinterest
+            </span>
+            <span className="mt-1 block text-sm text-muted">
+              What works on each platform, how to pick a safe downloader, and step-by-step instructions for iPhone, Android
+              and desktop.
+            </span>
+          </span>
+          <span className="flex shrink-0 items-center gap-1 text-sm font-semibold">
+            Read the guide <ArrowIcon size={15} className="transition-transform group-hover:translate-x-1" />
+          </span>
+        </Link>
+      </section>
       <Steps steps={STEPS} />
       <Features features={FEATURES} />
       <FaqSection faqs={HOME_FAQS} />
