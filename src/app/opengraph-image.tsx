@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/BrandMark";
 
-export const alt = "Yoinkit — yoink exactly the part you want";
+export const alt = "Yoinkit — get exactly the part you want";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -27,7 +27,7 @@ export default function OpengraphImage() {
           <div style={{ fontSize: 56, fontWeight: 800 }}>Yoinkit</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Yoink exactly</div>
+          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Get exactly</div>
           <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: "#c6ff3d" }}>
             the part you want.
           </div>

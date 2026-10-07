@@ -1,6 +1,6 @@
 export const site = {
   name: "Yoinkit",
-  tagline: "Yoink exactly the part you want",
+  tagline: "Get exactly the part you want",
   description:
     "Free video downloader and editor for Instagram, TikTok, Facebook, Snapchat and Pinterest. Trim, crop and save just the part you want as MP4, GIF or MP3.",
   email: "ashanviy@gmail.com",

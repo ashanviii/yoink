@@ -73,7 +73,7 @@ export default function Home() {
         ]}
       />
       <Hero
-        title="Yoink exactly the part you want"
+        title="Get exactly the part you want"
         subtitle="Paste a Reel, TikTok, Facebook video, Snap or Pin. Trim it, crop it, speed it up, then save it as a video, GIF, sound or still. All on one screen, made for your phone."
       />
       <Steps steps={STEPS} />
