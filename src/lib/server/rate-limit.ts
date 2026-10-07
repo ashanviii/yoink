@@ -53,7 +53,8 @@ type Limiters = { resolve: RateLimiter; media: RateLimiter; thumb: RateLimiter }
 // Survive dev hot reloads without resetting counters.
 const globalForLimits = globalThis as unknown as { __yoinkMediaLimiters?: Limiters };
 export const limiters: Limiters = (globalForLimits.__yoinkMediaLimiters ??= {
-  resolve: new RateLimiter(20, 60_000),
+  // Each resolve is one video lookup: 3 per minute per IP, refilling one every 20 s.
+  resolve: new RateLimiter(3, 60_000),
   // Proxied media: a video element seeks with many range requests and an HLS stream is one request per segment.
   media: new RateLimiter(600, 60_000),
   thumb: new RateLimiter(120, 60_000),
