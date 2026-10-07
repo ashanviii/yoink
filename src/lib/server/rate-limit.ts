@@ -23,42 +23,57 @@ export class RateLimiter {
     this.refillPerMs = capacity / windowMs;
   }
 
-  /** Consumes one token for `key` or throws a RATE_LIMITED AppError. */
-  consume(key: string): void {
+  /**
+   * Throws a RATE_LIMITED AppError when `key` has less than one token left, else
+   * deducts `cost`. A cost of 0 only checks that the budget isn't exhausted.
+   */
+  consume(key: string, cost = 1, message?: string): void {
+    const bucket = this.refill(key);
+    if (bucket.tokens < 1) {
+      const retryAfter = Math.ceil((1 - bucket.tokens) / this.refillPerMs / 1000);
+      throw new AppError("RATE_LIMITED", message, { retryAfter });
+    }
+    bucket.tokens -= cost;
+  }
+
+  /** Deducts usage measured after the fact (e.g. bytes streamed). The balance may go negative. */
+  charge(key: string, amount: number): void {
+    this.refill(key).tokens -= amount;
+  }
+
+  private refill(key: string): Bucket {
     const now = Date.now();
     const bucket = this.buckets.get(key) ?? { tokens: this.capacity, updatedAt: now };
     bucket.tokens = Math.min(this.capacity, bucket.tokens + (now - bucket.updatedAt) * this.refillPerMs);
     bucket.updatedAt = now;
-
-    if (bucket.tokens < 1) {
-      this.buckets.set(key, bucket);
-      const retryAfter = Math.ceil((1 - bucket.tokens) / this.refillPerMs / 1000);
-      throw new AppError("RATE_LIMITED", undefined, { retryAfter });
-    }
-    bucket.tokens -= 1;
     this.buckets.set(key, bucket);
-
     if (this.buckets.size > 50_000) this.sweep(now);
+    return bucket;
   }
 
   private sweep(now: number): void {
     for (const [key, bucket] of this.buckets) {
-      if ((now - bucket.updatedAt) * this.refillPerMs >= this.capacity) this.buckets.delete(key);
+      if (bucket.tokens + (now - bucket.updatedAt) * this.refillPerMs >= this.capacity) this.buckets.delete(key);
     }
   }
 }
 
-type Limiters = { resolve: RateLimiter; media: RateLimiter; thumb: RateLimiter };
+type Limiters = { resolve: RateLimiter; media: RateLimiter; thumb: RateLimiter; bytes: RateLimiter };
 
 // Survive dev hot reloads without resetting counters.
-const globalForLimits = globalThis as unknown as { __yoinkMediaLimiters?: Limiters };
-export const limiters: Limiters = (globalForLimits.__yoinkMediaLimiters ??= {
+const globalForLimits = globalThis as unknown as { __yoinkLimiters?: Limiters };
+export const limiters: Limiters = (globalForLimits.__yoinkLimiters ??= {
   // Each resolve is one video lookup: 3 per minute per IP, refilling one every 20 s.
   resolve: new RateLimiter(3, 60_000),
   // Proxied media: a video element seeks with many range requests and an HLS stream is one request per segment.
   media: new RateLimiter(600, 60_000),
-  thumb: new RateLimiter(120, 60_000),
+  thumb: new RateLimiter(60, 60_000),
+  // Bytes relayed through /api/media and /api/thumb: 1 GB per IP per hour, so a script
+  // replaying a media token can't burn through the server's monthly transfer.
+  bytes: new RateLimiter(1024 ** 3, 60 * 60_000),
 });
+
+export const BYTE_LIMIT_MESSAGE = "You've hit the hourly download limit. Try again a bit later.";
 
 let warnedUnsafeIp = false;
 

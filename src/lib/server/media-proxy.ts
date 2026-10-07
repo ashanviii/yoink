@@ -103,7 +103,23 @@ const baseHeaders = {
   "Content-Security-Policy": "default-src 'none'; sandbox",
 };
 
-export async function proxyMedia(payload: MediaTokenPayload, request: Request): Promise<Response> {
+/** Reports each chunk's size to `onBytes` as it streams to the client. */
+function metered(body: ReadableStream<Uint8Array>, onBytes: (bytes: number) => void): ReadableStream<Uint8Array> {
+  return body.pipeThrough(
+    new TransformStream({
+      transform(chunk, controller) {
+        onBytes(chunk.byteLength);
+        controller.enqueue(chunk);
+      },
+    }),
+  );
+}
+
+export async function proxyMedia(
+  payload: MediaTokenPayload,
+  request: Request,
+  onBytes: (bytes: number) => void,
+): Promise<Response> {
   const rawRange = request.headers.get("range");
   const range = !payload.x && rawRange && RANGE.test(rawRange) ? rawRange : null;
   const upstream = await fetchUpstream(payload, range, request.signal);
@@ -112,6 +128,7 @@ export async function proxyMedia(payload: MediaTokenPayload, request: Request): 
     const length = Number(upstream.headers.get("content-length") ?? 0);
     if (length > MAX_PLAYLIST_BYTES) throw new AppError("TOO_LARGE");
     const text = await upstream.text();
+    onBytes(text.length);
     if (text.length > MAX_PLAYLIST_BYTES || !text.trimStart().startsWith("#EXTM3U")) throw new AppError("NO_MEDIA");
     return new Response(rewritePlaylist(text, upstream.url || payload.u, payload), {
       headers: { ...baseHeaders, "Content-Type": "application/vnd.apple.mpegurl" },
@@ -136,5 +153,5 @@ export async function proxyMedia(payload: MediaTokenPayload, request: Request): 
   const contentRange = upstream.headers.get("content-range");
   if (contentRange) headers["Content-Range"] = contentRange;
 
-  return new Response(upstream.body, { status: upstream.status === 206 ? 206 : 200, headers });
+  return new Response(upstream.body && metered(upstream.body, onBytes), { status: upstream.status === 206 ? 206 : 200, headers });
 }
