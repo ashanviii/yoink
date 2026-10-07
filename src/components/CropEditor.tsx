@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { CropParams, StreamRef } from "@/lib/media-types";
+import { EditPanel } from "./EditPanel";
 import { useStill } from "./filmstrip";
 
 /** Smallest crop, as a fraction of the frame's width or height. */
@@ -66,7 +67,6 @@ interface Props {
 }
 
 export function CropEditor({ durationSec, preview, width, height, onCropChange }: Props) {
-  const id = useId();
   const [enabled, setEnabled] = useState(false);
   const [box, setBox] = useState<CropParams>(FULL);
   const [shape, setShape] = useState<(typeof SHAPES)[number]["label"]>("Free");
@@ -135,109 +135,93 @@ export function CropEditor({ durationSec, preview, width, height, onCropChange }
   const stillUrl = still && "url" in still ? still.url : null;
 
   return (
-    <div className="rounded-lg border border-border bg-surface-2 p-3">
-      <label htmlFor={`${id}-toggle`} className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold">
-        <input
-          id={`${id}-toggle`}
-          type="checkbox"
-          checked={enabled}
-          onChange={toggle}
-          className="size-4 cursor-pointer accent-[var(--accent)]"
-        />
-        Crop before downloading
-        {enabled && outSize && <span className="ml-auto font-mono text-xs text-muted">{outSize}</span>}
-      </label>
+    <EditPanel label="Crop before downloading" enabled={enabled} onToggle={toggle} summary={outSize}>
+      <div role="radiogroup" aria-label="Crop shape" className="flex flex-wrap gap-1.5">
+        {SHAPES.map((s) => (
+          <button
+            key={s.label}
+            type="button"
+            role="radio"
+            aria-checked={shape === s.label}
+            disabled={!!s.ratio && !frameAspect}
+            onClick={() => pickShape(s.label)}
+            className={`rounded-md border px-2.5 py-1 text-xs font-medium transition disabled:opacity-40 ${
+              shape === s.label ? "border-text bg-text text-bg" : "border-border text-muted hover:text-text"
+            }`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
 
-      {enabled && (
-        <div className="mt-3 space-y-3">
-          <div role="radiogroup" aria-label="Crop shape" className="flex flex-wrap gap-1.5">
-            {SHAPES.map((s) => (
-              <button
-                key={s.label}
-                type="button"
-                role="radio"
-                aria-checked={shape === s.label}
-                disabled={!!s.ratio && !frameAspect}
-                onClick={() => pickShape(s.label)}
-                className={`rounded-md border px-2.5 py-1 text-xs font-medium transition disabled:opacity-40 ${
-                  shape === s.label ? "border-text bg-text text-bg" : "border-border text-muted hover:text-text"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-
-          {still && "failed" in still ? (
-            <p className="text-sm text-muted">Couldn&apos;t load a preview frame, so the crop can&apos;t be shown.</p>
+      {still && "failed" in still ? (
+        <p className="text-sm text-muted">Couldn&apos;t load a preview frame, so the crop can&apos;t be shown.</p>
+      ) : (
+        <div
+          ref={frameRef}
+          className="relative mx-auto w-fit touch-none select-none overflow-hidden rounded-md bg-surface"
+          onPointerMove={onMove}
+          onPointerUp={() => (drag.current = null)}
+          onPointerCancel={() => (drag.current = null)}
+        >
+          {stillUrl ? (
+            // A blob: URL drawn from the preview stream; next/image can't optimise it.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={stillUrl}
+              alt=""
+              draggable={false}
+              className="block max-h-80 max-w-full"
+              // The source size is exact; the preview frame's can be off by a rounded pixel.
+              onLoad={(e) => !(width && height) && setFrameAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+            />
           ) : (
-            <div
-              ref={frameRef}
-              className="relative mx-auto w-fit touch-none select-none overflow-hidden rounded-md bg-surface"
-              onPointerMove={onMove}
-              onPointerUp={() => (drag.current = null)}
-              onPointerCancel={() => (drag.current = null)}
-            >
-              {stillUrl ? (
-                // A blob: URL drawn from the preview stream; next/image can't optimise it.
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={stillUrl}
-                  alt=""
-                  draggable={false}
-                  className="block max-h-80 max-w-full"
-                  // The source size is exact; the preview frame's can be off by a rounded pixel.
-                  onLoad={(e) => !(width && height) && setFrameAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
-                />
-              ) : (
-                <div className="aspect-video h-48 animate-pulse bg-surface" />
-              )}
+            <div className="aspect-video h-48 animate-pulse bg-surface" />
+          )}
 
-              {stillUrl && (
-                <div
-                  role="group"
-                  tabIndex={0}
-                  aria-label="Crop area. Drag to move, drag the corners to resize, or use the arrow keys."
-                  onKeyDown={onKey}
-                  onPointerDown={(e) => begin(e, null)}
-                  className="absolute cursor-move outline-none ring-white focus-visible:ring-2"
-                  style={{
-                    left: `${box.x * 100}%`,
-                    top: `${box.y * 100}%`,
-                    width: `${box.w * 100}%`,
-                    height: `${box.h * 100}%`,
-                    // Dims everything outside the box.
-                    boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.65)",
-                  }}
-                >
-                  <div className="pointer-events-none absolute inset-0 border border-white/90">
-                    <div className="absolute inset-x-0 top-1/3 border-t border-white/30" />
-                    <div className="absolute inset-x-0 top-2/3 border-t border-white/30" />
-                    <div className="absolute inset-y-0 left-1/3 border-l border-white/30" />
-                    <div className="absolute inset-y-0 left-2/3 border-l border-white/30" />
-                  </div>
-                  {CORNERS.map((corner) => (
-                    <span
-                      key={corner}
-                      aria-hidden
-                      onPointerDown={(e) => begin(e, corner)}
-                      className={`absolute size-5 border-white ${
-                        {
-                          nw: "-left-1 -top-1 cursor-nwse-resize border-l-[3px] border-t-[3px]",
-                          ne: "-right-1 -top-1 cursor-nesw-resize border-r-[3px] border-t-[3px]",
-                          sw: "-bottom-1 -left-1 cursor-nesw-resize border-b-[3px] border-l-[3px]",
-                          se: "-bottom-1 -right-1 cursor-nwse-resize border-b-[3px] border-r-[3px]",
-                        }[corner]
-                      }`}
-                    />
-                  ))}
-                </div>
-              )}
+          {stillUrl && (
+            <div
+              role="group"
+              tabIndex={0}
+              aria-label="Crop area. Drag to move, drag the corners to resize, or use the arrow keys."
+              onKeyDown={onKey}
+              onPointerDown={(e) => begin(e, null)}
+              className="absolute cursor-move outline-none ring-white focus-visible:ring-2"
+              style={{
+                left: `${box.x * 100}%`,
+                top: `${box.y * 100}%`,
+                width: `${box.w * 100}%`,
+                height: `${box.h * 100}%`,
+                // Dims everything outside the box.
+                boxShadow: "0 0 0 9999px rgb(0 0 0 / 0.65)",
+              }}
+            >
+              <div className="pointer-events-none absolute inset-0 border border-white/90">
+                <div className="absolute inset-x-0 top-1/3 border-t border-white/30" />
+                <div className="absolute inset-x-0 top-2/3 border-t border-white/30" />
+                <div className="absolute inset-y-0 left-1/3 border-l border-white/30" />
+                <div className="absolute inset-y-0 left-2/3 border-l border-white/30" />
+              </div>
+              {CORNERS.map((corner) => (
+                <span
+                  key={corner}
+                  aria-hidden
+                  onPointerDown={(e) => begin(e, corner)}
+                  className={`absolute size-5 border-white ${
+                    {
+                      nw: "-left-1 -top-1 cursor-nwse-resize border-l-[3px] border-t-[3px]",
+                      ne: "-right-1 -top-1 cursor-nesw-resize border-r-[3px] border-t-[3px]",
+                      sw: "-bottom-1 -left-1 cursor-nesw-resize border-b-[3px] border-l-[3px]",
+                      se: "-bottom-1 -right-1 cursor-nwse-resize border-b-[3px] border-r-[3px]",
+                    }[corner]
+                  }`}
+                />
+              ))}
             </div>
           )}
-          <p className="text-center text-xs text-muted">Drag the box to move it, or drag a corner to resize.</p>
         </div>
       )}
-    </div>
+      <p className="text-center text-xs text-muted">Drag the box to move it, or drag a corner to resize.</p>
+    </EditPanel>
   );
 }

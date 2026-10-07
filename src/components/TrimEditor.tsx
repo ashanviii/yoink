@@ -1,7 +1,8 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import type { StreamRef, TrimParams } from "@/lib/media-types";
+import { EditPanel } from "./EditPanel";
 import { FilmstripFrames, STRIP_HEIGHT_PX, clock, frameIndex, frameStyle, useSprite, type Sprite } from "./filmstrip";
 
 const MIN_CLIP_SEC = 0.5;
@@ -142,7 +143,6 @@ interface Props {
 }
 
 export function TrimEditor({ durationSec, preview, onTrimChange }: Props) {
-  const id = useId();
   const [enabled, setEnabled] = useState(false);
   const [start, setStart] = useState(0);
   const [end, setEnd] = useState(durationSec);
@@ -165,36 +165,16 @@ export function TrimEditor({ durationSec, preview, onTrimChange }: Props) {
   };
 
   return (
-    <div className="rounded-lg border border-border bg-surface-2 p-3">
-      <label htmlFor={`${id}-toggle`} className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold">
-        <input
-          id={`${id}-toggle`}
-          type="checkbox"
-          checked={enabled}
-          onChange={toggle}
-          className="size-4 cursor-pointer accent-[var(--accent)]"
-        />
-        Trim before downloading
-        {enabled && (
-          <span className="ml-auto font-mono text-xs text-muted">
-            {clock(end - start)} of {clock(durationSec)}
-          </span>
-        )}
-      </label>
-
-      {enabled && (
-        <div className="mt-3 space-y-3">
-          {sprite.status !== "error" && (
-            <div className="grid grid-cols-2 gap-3">
-              <FramePreview sprite={sprite} sec={start} duration={durationSec} label="Starts at" />
-              <FramePreview sprite={sprite} sec={end} duration={durationSec} label="Ends at" />
-            </div>
-          )}
-
-          <TrimStrip sprite={sprite} start={start} end={end} duration={durationSec} onChange={setRange} />
-          <p className="text-center text-xs text-muted">Drag the handles to trim, or drag the middle to slide the clip.</p>
+    <EditPanel label="Trim before downloading" enabled={enabled} onToggle={toggle} summary={`${clock(end - start)} of ${clock(durationSec)}`}>
+      {sprite.status !== "error" && (
+        <div className="grid grid-cols-2 gap-3">
+          <FramePreview sprite={sprite} sec={start} duration={durationSec} label="Starts at" />
+          <FramePreview sprite={sprite} sec={end} duration={durationSec} label="Ends at" />
         </div>
       )}
-    </div>
+
+      <TrimStrip sprite={sprite} start={start} end={end} duration={durationSec} onChange={setRange} />
+      <p className="text-center text-xs text-muted">Drag the handles to trim, or drag the middle to slide the clip.</p>
+    </EditPanel>
   );
 }
