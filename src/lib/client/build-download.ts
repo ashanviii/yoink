@@ -77,9 +77,11 @@ function frameSource(ref: StreamRef, options: { onProgress: (fraction: number | 
 // --- ffmpeg recipes (same settings the server used) ---
 
 function encoderArgs(format: FrameFormat): string[] {
-  // JPEG q 2 is near-lossless. PNG is lossless at any setting; the default
-  // (no row filter) makes ~40% larger files than the "up" filter for the same CPU.
-  return format === "jpg" ? ["-q:v", "2"] : ["-pred", "up", "-compression_level", "3"];
+  // JPEG q 2 is near-lossless. "-huffman default" is required: the wasm build's MJPEG encoder
+  // traps with "memory access out of bounds" in its default optimal-Huffman mode, depending on
+  // frame size and quality. PNG is lossless at any setting; the default (no row filter) makes
+  // ~40% larger files than the "up" filter for the same CPU.
+  return format === "jpg" ? ["-q:v", "2", "-huffman", "default"] : ["-pred", "up", "-compression_level", "3"];
 }
 
 function metadataArgs(meta: DownloadRecipe["meta"]): string[] {
