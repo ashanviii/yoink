@@ -131,6 +131,85 @@ body {
   animation: var(--animate-stripes);
 }
 
+/*
+ * The showcase phone's demo: drag the trim handles in, tap Save, watch it save, see the
+ * toast, start over. One timeline on .demo drives everything through these properties;
+ * the phone's elements just read them. Their initial values are the finished, trimmed
+ * state, which is what shows without animation (reduced motion).
+ */
+@property --demo-l { syntax: "<percentage>"; inherits: true; initial-value: 25%; }
+@property --demo-r { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
+@property --demo-start { syntax: "<integer>"; inherits: true; initial-value: 4; }
+@property --demo-end { syntax: "<integer>"; inherits: true; initial-value: 11; }
+@property --demo-len { syntax: "<integer>"; inherits: true; initial-value: 7; }
+@property --demo-fill { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
+@property --demo-saved { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-busy { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-toast { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --demo-press { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --demo-tap-l { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-tap-r { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-tap-save { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+@keyframes demo {
+  /* Drag the left handle in… */
+  0%, 6% { --demo-l: 0%; --demo-start: 0; --demo-len: 14; }
+  22% { --demo-l: 25%; --demo-start: 4; --demo-len: 10; }
+  /* …then the right one. */
+  0%, 26% { --demo-r: 0%; --demo-end: 14; }
+  26% { --demo-len: 10; }
+  40%, 90% { --demo-r: 22%; --demo-end: 11; --demo-len: 7; }
+  90% { --demo-l: 25%; --demo-start: 4; }
+  97%, 100% { --demo-l: 0%; --demo-r: 0%; --demo-start: 0; --demo-end: 14; --demo-len: 14; }
+
+  /* The finger on each handle, then on Save. */
+  0%, 3% { --demo-tap-l: 0; }
+  5%, 22% { --demo-tap-l: 1; }
+  24%, 100% { --demo-tap-l: 0; }
+  0%, 23% { --demo-tap-r: 0; }
+  26%, 40% { --demo-tap-r: 1; }
+  42%, 100% { --demo-tap-r: 0; }
+  0%, 46% { --demo-tap-save: 0; --demo-press: 1; }
+  49% { --demo-tap-save: 1; --demo-press: 0.95; }
+  53% { --demo-press: 1; }
+  55%, 100% { --demo-tap-save: 0; }
+
+  /* Saving fills the button, then it says saved. */
+  0%, 52% { --demo-fill: 0%; }
+  66%, 92% { --demo-fill: 100%; }
+  97%, 100% { --demo-fill: 0%; }
+  0%, 50% { --demo-busy: 0; }
+  52%, 92% { --demo-busy: 1; }
+  96%, 100% { --demo-busy: 0; }
+  0%, 66% { --demo-saved: 0; }
+  68%, 92% { --demo-saved: 1; }
+  96%, 100% { --demo-saved: 0; }
+
+  /* And the toast. */
+  0%, 68% { --demo-toast: 0; }
+  72%, 90% { --demo-toast: 1; }
+  94%, 100% { --demo-toast: 0; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .demo {
+    animation: demo 10s ease-in-out infinite;
+  }
+}
+
+.demo-start::after {
+  counter-reset: demo-start var(--demo-start);
+  content: "0:" counter(demo-start, decimal-leading-zero);
+}
+.demo-end::after {
+  counter-reset: demo-end var(--demo-end);
+  content: "0:" counter(demo-end, decimal-leading-zero);
+}
+.demo-len::after {
+  counter-reset: demo-len var(--demo-len);
+  content: counter(demo-len);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

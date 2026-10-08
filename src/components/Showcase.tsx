@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { ArrowIcon, CheckIcon, PlayIcon } from "./icons";
 
 /** Tones of the made-up clip in the phone, frame by frame along the filmstrip. */
@@ -35,7 +36,7 @@ export function Showcase() {
 
 function Phone() {
   return (
-    <div aria-hidden className="relative mx-auto w-[17rem] select-none lg:mb-[-3.5rem] lg:mt-0">
+    <div aria-hidden className="demo relative mx-auto w-[17rem] select-none lg:mb-[-3.5rem] lg:mt-0">
       <div className="rounded-t-[2.75rem] bg-[#1d1b16] p-2.5 pb-0 shadow-[0_30px_60px_-30px_rgb(0_0_0/0.5)] lg:rounded-[2.75rem] lg:pb-2.5">
         <div className="overflow-hidden rounded-t-[2.25rem] bg-white pb-5 text-[#1d1b16] lg:rounded-[2.25rem]">
           <div className="flex items-center justify-between px-5 pt-4 text-[13px] font-extrabold">
@@ -55,20 +56,32 @@ function Phone() {
             <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">0:14</span>
           </div>
 
-          {/* Filmstrip with the kept part selected. */}
+          {/* Filmstrip with the kept part selected; the handles and times follow the demo. */}
           <div className="relative mx-3 mt-3 flex h-10 overflow-hidden rounded-xl">
             {FRAMES.map((tone) => (
               <span key={tone} className="h-full flex-1" style={{ background: tone }} />
             ))}
-            <span className="absolute inset-y-0 left-0 w-[25%] bg-white/65" />
-            <span className="absolute inset-y-0 right-0 w-[22%] bg-white/65" />
-            <span className="absolute inset-y-0 left-[25%] right-[22%] rounded-lg border-[3px] border-[#ffc83d]" />
-            <span className="absolute inset-y-0 left-[25%] w-2 -translate-x-1/2 rounded-full bg-[#1d1b16]" />
-            <span className="absolute inset-y-0 right-[22%] w-2 translate-x-1/2 rounded-full bg-[#1d1b16]" />
+            <span className="absolute inset-y-0 left-0 bg-white/65" style={{ width: "var(--demo-l)" }} />
+            <span className="absolute inset-y-0 right-0 bg-white/65" style={{ width: "var(--demo-r)" }} />
+            <span
+              className="absolute inset-y-0 rounded-lg border-[3px] border-[#ffc83d]"
+              style={{ left: "var(--demo-l)", right: "var(--demo-r)" }}
+            />
+            <span className="absolute inset-y-0 w-2 -translate-x-1/2 rounded-full bg-[#1d1b16]" style={{ left: "max(4px, var(--demo-l))" }} />
+            <span className="absolute inset-y-0 w-2 translate-x-1/2 rounded-full bg-[#1d1b16]" style={{ right: "max(4px, var(--demo-r))" }} />
+            <Finger style={{ left: "max(13px, var(--demo-l))", opacity: "var(--demo-tap-l)", scale: "calc(0.6 + 0.4 * var(--demo-tap-l))" }} />
+            <Finger
+              className="translate-x-1/2"
+              style={{ right: "max(13px, var(--demo-r))", opacity: "var(--demo-tap-r)", scale: "calc(0.6 + 0.4 * var(--demo-tap-r))" }}
+            />
           </div>
-          <div className="mx-4 mt-2 flex justify-between text-[11px] font-semibold text-[#6b665c]">
-            <span>Starts 0:04</span>
-            <span>Ends 0:11</span>
+          <div className="mx-4 mt-2 flex justify-between text-[11px] font-semibold tabular-nums text-[#6b665c]">
+            <span>
+              Starts <span className="demo-start" />
+            </span>
+            <span>
+              Ends <span className="demo-end" />
+            </span>
           </div>
 
           <div className="mx-3 mt-3 flex gap-1.5">
@@ -81,11 +94,44 @@ function Phone() {
               </span>
             ))}
           </div>
-          <div className="mx-3 mt-3 rounded-full bg-[#1d1b16] py-2.5 text-center text-[13px] font-bold text-white">Save 7 seconds · MP4</div>
+          <div
+            className="relative mx-3 mt-3 overflow-hidden rounded-full bg-[#1d1b16] py-2.5 text-center text-[13px] font-bold text-white"
+            style={{ scale: "var(--demo-press)" }}
+          >
+            {/* The label under the sweep says "Saving…" too, so the reveal lines up. */}
+            <span className="grid">
+              <span className="col-start-1 row-start-1" style={{ opacity: "calc(1 - var(--demo-busy))" }}>
+                Save <span className="demo-len" /> seconds · MP4
+              </span>
+              <span className="col-start-1 row-start-1" style={{ opacity: "var(--demo-busy)" }}>
+                Saving…
+              </span>
+            </span>
+            {/* Saving sweeps in from the left, then turns into "saved". */}
+            <span
+              className="absolute inset-0 grid place-items-center bg-[#ffc83d] text-[#1d1b16]"
+              style={{ clipPath: "inset(0 calc(100% - var(--demo-fill)) 0 0)" }}
+            >
+              <span className="col-start-1 row-start-1" style={{ opacity: "calc(1 - var(--demo-saved))" }}>
+                Saving…
+              </span>
+              <span className="col-start-1 row-start-1 flex items-center gap-1.5" style={{ opacity: "var(--demo-saved)" }}>
+                <CheckIcon size={14} /> Saved to your phone
+              </span>
+            </span>
+            <Finger style={{ left: "50%", opacity: "var(--demo-tap-save)", scale: "calc(0.6 + 0.4 * var(--demo-tap-save))" }} />
+          </div>
         </div>
       </div>
 
-      <div className="absolute -left-16 top-[56%] hidden -rotate-3 items-center gap-2.5 rounded-2xl bg-white py-2.5 pl-2.5 pr-4 text-[#1d1b16] shadow-[0_16px_40px_-16px_rgb(0_0_0/0.35)] sm:flex">
+      <div
+        // Over the top of the phone on narrow screens; hanging off its left edge where there's room.
+        className="absolute left-1/2 top-[13%] flex -translate-x-1/2 -rotate-3 items-center gap-2.5 whitespace-nowrap rounded-2xl bg-white py-2.5 pl-2.5 pr-4 text-[#1d1b16] shadow-[0_16px_40px_-16px_rgb(0_0_0/0.35)] sm:-left-16 sm:top-[56%] sm:translate-x-0"
+        style={{
+          opacity: "var(--demo-toast)",
+          transform: "translateY(calc((1 - var(--demo-toast)) * 12px)) scale(calc(0.92 + 0.08 * var(--demo-toast)))",
+        }}
+      >
         <span className="grid size-8 place-items-center rounded-full bg-[#ffc83d]">
           <CheckIcon size={16} />
         </span>
@@ -95,5 +141,15 @@ function Phone() {
         </span>
       </div>
     </div>
+  );
+}
+
+/** A fingertip on the screen, centred on the point it presses. */
+function Finger({ className = "-translate-x-1/2", style }: { className?: string; style: CSSProperties }) {
+  return (
+    <span
+      className={`absolute top-1/2 size-[26px] -translate-y-1/2 rounded-full border-2 border-white bg-[#1d1b16]/30 shadow-[0_2px_8px_rgb(0_0_0/0.25)] ${className}`}
+      style={style}
+    />
   );
 }
