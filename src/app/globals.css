@@ -69,6 +69,25 @@
     from { background-position: 0 0; }
     to { background-position: 28px 0; }
   }
+  @keyframes bob {
+    0%, 100% { translate: 0 0; }
+    50% { translate: 0 -12px; }
+  }
+  @keyframes drift {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(4%, 6%) scale(1.08); }
+  }
+  @keyframes marquee {
+    to { transform: translateX(-50%); }
+  }
+  @keyframes marker {
+    from { background-size: 0% 0.32em; }
+    to { background-size: 100% 0.32em; }
+  }
+  @keyframes reveal {
+    from { opacity: 0; transform: translateY(28px); }
+    to { opacity: 1; transform: none; }
+  }
 }
 
 html {
@@ -119,6 +138,52 @@ body {
   );
   background-size: 28px 28px;
   animation: var(--animate-stripes);
+}
+
+/* Hero backdrop: a soft accent glow over a dot grid that fades out toward the edges. */
+.hero-glow {
+  background:
+    radial-gradient(closest-side, color-mix(in srgb, var(--accent) 38%, transparent), transparent) 20% 30% / 55% 70% no-repeat,
+    radial-gradient(closest-side, color-mix(in srgb, var(--accent) 24%, transparent), transparent) 85% 15% / 45% 60% no-repeat;
+  animation: drift 18s ease-in-out infinite;
+}
+.dark .hero-glow {
+  opacity: 0.55;
+}
+.dot-grid {
+  background-image: radial-gradient(var(--border) 1.2px, transparent 1.2px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 30%, transparent 75%);
+}
+
+/* A highlighter stroke that sweeps under the hero's key phrase. */
+.marker {
+  background: linear-gradient(var(--accent), var(--accent)) 0 88% / 100% 0.32em no-repeat;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  animation: marker 0.9s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.float {
+  animation: bob 6s ease-in-out infinite;
+}
+
+.marquee {
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+.marquee-track {
+  animation: marquee 40s linear infinite;
+}
+
+/* Sections fade up as they scroll into view, where the browser can drive it without JS. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

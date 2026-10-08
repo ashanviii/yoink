@@ -2,12 +2,12 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Faq } from "@/lib/landing-pages";
 import type { PlatformId } from "@/lib/platforms";
-import { ArrowIcon, PlatformIcon } from "./icons";
+import { ArrowIcon, DownloadIcon, FilmIcon, LinkIcon, PlatformIcon } from "./icons";
 
 /** A page section: heading in a narrow left column, content on the right (stacked on mobile). */
 export function Section({ title, id, children }: { title: string; id: string; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="mx-auto max-w-5xl px-4 pt-16 sm:pt-20">
+    <section aria-labelledby={id} className="reveal mx-auto max-w-5xl px-4 pt-16 sm:pt-20">
       <div className="grid gap-5 border-t border-border pt-6 md:grid-cols-[13rem_1fr] md:gap-10">
         <h2 id={id} className="font-display text-2xl font-bold leading-tight">
           {title}
@@ -18,16 +18,30 @@ export function Section({ title, id, children }: { title: string; id: string; ch
   );
 }
 
+/** Every page's steps are copy the link, pick the part, save it. */
+const STEP_ICONS = [LinkIcon, FilmIcon, DownloadIcon];
+
+const card =
+  "rounded-2xl border border-border bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:border-text/25 hover:shadow-[0_14px_30px_-18px_rgb(0_0_0/0.4)]";
+
 export function Steps({ steps }: { steps: readonly string[] }) {
   return (
     <Section title="How it works" id="how-heading">
-      <ol className="grid gap-6 sm:grid-cols-3">
-        {steps.map((step, i) => (
-          <li key={step}>
-            <span className="font-display text-sm font-bold text-muted tabular-nums">Step {i + 1}</span>
-            <p className="mt-1.5 text-[15px] leading-relaxed">{step}</p>
-          </li>
-        ))}
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {steps.map((step, i) => {
+          const Icon = STEP_ICONS[i] ?? DownloadIcon;
+          return (
+            <li key={step} className={`group ${card}`}>
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                  <Icon size={19} />
+                </span>
+                <span className="font-display text-sm font-bold text-muted tabular-nums">Step {i + 1}</span>
+              </div>
+              <p className="mt-3 text-[15px] leading-relaxed">{step}</p>
+            </li>
+          );
+        })}
       </ol>
     </Section>
   );
@@ -36,11 +50,14 @@ export function Steps({ steps }: { steps: readonly string[] }) {
 export function Features({ features }: { features: readonly { title: string; body: string }[] }) {
   return (
     <Section title="What you get" id="features-heading">
-      <dl className="grid gap-x-10 gap-y-6 sm:grid-cols-2">
+      <dl className="grid gap-3 sm:grid-cols-2">
         {features.map((feature) => (
-          <div key={feature.title}>
-            <dt className="font-semibold">{feature.title}</dt>
-            <dd className="mt-1 text-[15px] leading-relaxed text-muted">{feature.body}</dd>
+          <div key={feature.title} className={`${card} sm:[&:last-child:nth-child(odd)]:col-span-2`}>
+            <dt className="flex items-center gap-2.5 font-semibold">
+              <span aria-hidden className="size-2.5 shrink-0 rotate-45 rounded-[3px] bg-accent" />
+              {feature.title}
+            </dt>
+            <dd className="mt-1.5 text-[15px] leading-relaxed text-muted">{feature.body}</dd>
           </div>
         ))}
       </dl>

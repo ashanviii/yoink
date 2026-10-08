@@ -56,7 +56,8 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
         </ol>
       </nav>
       <Hero
-        title={`${page.h1} ${page.highlight}`}
+        title={page.h1}
+        highlight={page.highlight}
         subtitle={page.subtitle}
         placeholder={page.placeholder}
         platform={page.platform}
