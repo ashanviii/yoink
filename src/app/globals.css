@@ -132,68 +132,115 @@ body {
 }
 
 /*
- * The showcase phone's demo: drag the trim handles in, tap Save, watch it save, see the
- * toast, start over. One timeline on .demo drives everything through these properties;
- * the phone's elements just read them. Their initial values are the finished, trimmed
- * state, which is what shows without animation (reduced motion).
+ * The showcase phone's demo, five scenes on one 16s loop: paste a link, trim, crop, pick a
+ * format, save. One timeline on .demo animates these properties and the phone's elements
+ * just read them. Their initial values are the finished state (trimmed, cropped, saved),
+ * which is what shows without animation (reduced motion).
  */
+@property --demo-a { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-type { syntax: "<percentage>"; inherits: true; initial-value: 100%; }
+@property --demo-tap-go { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-go-press { syntax: "<number>"; inherits: true; initial-value: 1; }
 @property --demo-l { syntax: "<percentage>"; inherits: true; initial-value: 25%; }
 @property --demo-r { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
 @property --demo-start { syntax: "<integer>"; inherits: true; initial-value: 3; }
 @property --demo-end { syntax: "<integer>"; inherits: true; initial-value: 8; }
 @property --demo-len { syntax: "<integer>"; inherits: true; initial-value: 5; }
-@property --demo-fill { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
-@property --demo-saved { syntax: "<number>"; inherits: true; initial-value: 0; }
-@property --demo-busy { syntax: "<number>"; inherits: true; initial-value: 0; }
-@property --demo-toast { syntax: "<number>"; inherits: true; initial-value: 1; }
-@property --demo-press { syntax: "<number>"; inherits: true; initial-value: 1; }
 @property --demo-tap-l { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --demo-tap-r { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-crop { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --demo-chip { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-tap-chip { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --demo-tap-save { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-press { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --demo-busy { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-fill { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
+@property --demo-saved { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-toast { syntax: "<number>"; inherits: true; initial-value: 1; }
+@property --demo-c1 { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-c2 { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-c3 { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-c4 { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --demo-c5 { syntax: "<number>"; inherits: true; initial-value: 1; }
 
 @keyframes demo {
-  /* Drag the left handle in… */
-  0%, 6% { --demo-l: 0%; --demo-start: 0; --demo-len: 10; }
-  22% { --demo-l: 25%; --demo-start: 3; --demo-len: 7; }
-  /* …then the right one. */
-  0%, 26% { --demo-r: 0%; --demo-end: 10; }
-  26% { --demo-len: 7; }
-  40%, 90% { --demo-r: 22%; --demo-end: 8; --demo-len: 5; }
-  90% { --demo-l: 25%; --demo-start: 3; }
-  97%, 100% { --demo-l: 0%; --demo-r: 0%; --demo-start: 0; --demo-end: 10; --demo-len: 10; }
+  /* 1. Paste a link: it types itself in, then "Yoink it" is tapped. */
+  0%, 15% { --demo-a: 1; }
+  18%, 95% { --demo-a: 0; }
+  98%, 100% { --demo-a: 1; }
+  0%, 3% { --demo-type: 0%; animation-timing-function: steps(18, end); }
+  11%, 100% { --demo-type: 100%; }
+  0%, 11% { --demo-tap-go: 0; --demo-go-press: 1; }
+  12%, 14% { --demo-tap-go: 1; }
+  13% { --demo-go-press: 0.94; }
+  15% { --demo-go-press: 1; }
+  16%, 100% { --demo-tap-go: 0; }
 
-  /* The finger on each handle, then on Save. */
-  0%, 3% { --demo-tap-l: 0; }
-  5%, 22% { --demo-tap-l: 1; }
-  24%, 100% { --demo-tap-l: 0; }
-  0%, 23% { --demo-tap-r: 0; }
-  26%, 40% { --demo-tap-r: 1; }
-  42%, 100% { --demo-tap-r: 0; }
-  0%, 46% { --demo-tap-save: 0; --demo-press: 1; }
-  49% { --demo-tap-save: 1; --demo-press: 0.95; }
-  53% { --demo-press: 1; }
-  55%, 100% { --demo-tap-save: 0; }
+  /* 2. Trim: the left handle, then the right. */
+  0%, 20% { --demo-l: 0%; --demo-start: 0; --demo-len: 10; }
+  28%, 30% { --demo-l: 25%; --demo-start: 3; --demo-len: 7; }
+  0%, 30% { --demo-r: 0%; --demo-end: 10; }
+  38%, 100% { --demo-r: 22%; --demo-end: 8; --demo-len: 5; }
+  100% { --demo-l: 25%; --demo-start: 3; }
+  0%, 19% { --demo-tap-l: 0; }
+  21%, 28% { --demo-tap-l: 1; }
+  30%, 100% { --demo-tap-l: 0; }
+  0%, 29% { --demo-tap-r: 0; }
+  31%, 38% { --demo-tap-r: 1; }
+  40%, 100% { --demo-tap-r: 0; }
 
-  /* Saving fills the button, then it says saved. */
-  0%, 52% { --demo-fill: 0%; }
-  66%, 92% { --demo-fill: 100%; }
-  97%, 100% { --demo-fill: 0%; }
-  0%, 50% { --demo-busy: 0; }
-  52%, 92% { --demo-busy: 1; }
-  96%, 100% { --demo-busy: 0; }
-  0%, 66% { --demo-saved: 0; }
-  68%, 92% { --demo-saved: 1; }
-  96%, 100% { --demo-saved: 0; }
+  /* 3. Crop to a square. */
+  0%, 42% { --demo-crop: 0; }
+  48%, 100% { --demo-crop: 1; }
 
-  /* And the toast. */
-  0%, 68% { --demo-toast: 0; }
-  72%, 90% { --demo-toast: 1; }
-  94%, 100% { --demo-toast: 0; }
+  /* 4. Try the formats, settle on MP4. */
+  0%, 57% { --demo-chip: 0; }
+  59%, 60% { --demo-chip: 1; }
+  62%, 63% { --demo-chip: 2; }
+  65%, 66% { --demo-chip: 3; }
+  68%, 100% { --demo-chip: 0; }
+  0%, 56% { --demo-tap-chip: 0; }
+  57%, 68% { --demo-tap-chip: 1; }
+  70%, 100% { --demo-tap-chip: 0; }
+
+  /* 5. Save, watch it save, see the toast. */
+  0%, 70% { --demo-tap-save: 0; --demo-press: 1; }
+  72% { --demo-tap-save: 1; --demo-press: 0.95; }
+  75% { --demo-press: 1; }
+  77%, 100% { --demo-tap-save: 0; }
+  0%, 73% { --demo-busy: 0; --demo-fill: 0%; }
+  74% { --demo-busy: 1; }
+  84%, 94% { --demo-fill: 100%; }
+  94% { --demo-busy: 1; }
+  97%, 100% { --demo-busy: 0; --demo-fill: 0%; }
+  0%, 84% { --demo-saved: 0; }
+  86%, 94% { --demo-saved: 1; }
+  97%, 100% { --demo-saved: 0; }
+  0%, 86% { --demo-toast: 0; }
+  89%, 94% { --demo-toast: 1; }
+  96%, 100% { --demo-toast: 0; }
+
+  /* The caption above the phone names each scene. */
+  0%, 15% { --demo-c1: 1; }
+  17%, 96% { --demo-c1: 0; }
+  98%, 100% { --demo-c1: 1; }
+  0%, 16% { --demo-c2: 0; }
+  18%, 38% { --demo-c2: 1; }
+  40%, 100% { --demo-c2: 0; }
+  0%, 39% { --demo-c3: 0; }
+  41%, 53% { --demo-c3: 1; }
+  55%, 100% { --demo-c3: 0; }
+  0%, 54% { --demo-c4: 0; }
+  56%, 68% { --demo-c4: 1; }
+  70%, 100% { --demo-c4: 0; }
+  0%, 69% { --demo-c5: 0; }
+  71%, 94% { --demo-c5: 1; }
+  96%, 100% { --demo-c5: 0; }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .demo {
-    animation: demo 10s ease-in-out infinite;
+    animation: demo 16s ease-in-out infinite;
   }
 }
 
