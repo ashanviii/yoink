@@ -188,7 +188,9 @@ interface BuildContext {
 function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
   const formats = formatsOf(info).filter(usable);
   const duration = info.duration ?? null;
-  const fileStem = `${slugify(cleanTitle(info.title) ?? ctx.parsed.platform)}-${info.id}`.slice(0, 110);
+  // Untitled posts get titles like "TikTok video #<id>"; don't repeat the id after them.
+  const titleSlug = slugify(cleanTitle(info.title) ?? ctx.parsed.platform);
+  const fileStem = (titleSlug.includes(info.id.toLowerCase()) ? titleSlug : `${titleSlug}-${info.id}`).slice(0, 110);
 
   const refs = new Map<RawFormat, StreamRef>();
   const ref = (format: RawFormat) => refs.get(format) ?? refs.set(format, streamRef(format, info)).get(format)!;
