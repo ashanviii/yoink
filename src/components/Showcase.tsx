@@ -1,8 +1,9 @@
 import type { CSSProperties } from "react";
-import { ArrowIcon, CheckIcon, PlayIcon } from "./icons";
+import { DemoVideo } from "./DemoVideo";
+import { ArrowIcon, CheckIcon } from "./icons";
 
-/** Tones of the made-up clip in the phone, frame by frame along the filmstrip. */
-const FRAMES = ["#f6c177", "#f2a65a", "#ee8f4f", "#e9784a", "#d9654a", "#c4574c", "#a94f52", "#8c4a57"];
+/** Frames in /demo/tram-strip.jpg, one row, evenly spaced through the clip. */
+const STRIP_FRAMES = 8;
 
 /**
  * The yellow band under the hero: what the tool is for in one line, next to a phone
@@ -44,22 +45,24 @@ function Phone() {
             <span className="rounded-full bg-[#f8f5ee] px-2.5 py-1 text-[11px] font-bold">Instagram</span>
           </div>
 
-          {/* The clip: a sunset over hills, in flat shapes. */}
-          <div className="relative mx-3 mt-3 aspect-[4/5] overflow-hidden rounded-[1.4rem] bg-[#ffd98a]">
-            <div className="absolute left-1/2 top-[22%] size-24 -translate-x-1/2 rounded-full bg-[#fff1c9]" />
-            <div className="absolute -left-10 bottom-0 h-1/2 w-3/4 rounded-t-full bg-[#f2a65a]" />
-            <div className="absolute -right-12 bottom-0 h-[42%] w-3/4 rounded-t-full bg-[#e9784a]" />
-            <div className="absolute inset-x-0 bottom-0 h-[18%] bg-[#c4574c]" />
-            <span className="absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/90">
-              <PlayIcon size={20} />
-            </span>
-            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">0:14</span>
+          {/* The clip being trimmed. */}
+          <div className="relative mx-3 mt-3 aspect-[4/5] overflow-hidden rounded-[1.4rem] bg-[#d9e4ea]">
+            <DemoVideo src="/demo/tram.mp4" poster="/demo/tram.jpg" className="size-full object-cover" />
+            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/60 px-2 py-0.5 text-[11px] font-bold text-white">0:10</span>
           </div>
 
           {/* Filmstrip with the kept part selected; the handles and times follow the demo. */}
           <div className="relative mx-3 mt-3 flex h-10 overflow-hidden rounded-xl">
-            {FRAMES.map((tone) => (
-              <span key={tone} className="h-full flex-1" style={{ background: tone }} />
+            {Array.from({ length: STRIP_FRAMES }, (_, i) => (
+              <span
+                key={i}
+                className="h-full flex-1"
+                style={{
+                  backgroundImage: "url(/demo/tram-strip.jpg)",
+                  backgroundSize: `${STRIP_FRAMES * 100}% 100%`,
+                  backgroundPosition: `${(i / (STRIP_FRAMES - 1)) * 100}% 0`,
+                }}
+              />
             ))}
             <span className="absolute inset-y-0 left-0 bg-white/65" style={{ width: "var(--demo-l)" }} />
             <span className="absolute inset-y-0 right-0 bg-white/65" style={{ width: "var(--demo-r)" }} />
@@ -136,7 +139,7 @@ function Phone() {
           <CheckIcon size={16} />
         </span>
         <span className="leading-tight">
-          <span className="block text-[13px] font-extrabold">Saved · 2.5 MB</span>
+          <span className="block text-[13px] font-extrabold">Saved · 2.1 MB</span>
           <span className="block text-[11px] text-[#6b665c]">Just the part you wanted</span>
         </span>
       </div>

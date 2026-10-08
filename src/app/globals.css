@@ -139,9 +139,9 @@ body {
  */
 @property --demo-l { syntax: "<percentage>"; inherits: true; initial-value: 25%; }
 @property --demo-r { syntax: "<percentage>"; inherits: true; initial-value: 22%; }
-@property --demo-start { syntax: "<integer>"; inherits: true; initial-value: 4; }
-@property --demo-end { syntax: "<integer>"; inherits: true; initial-value: 11; }
-@property --demo-len { syntax: "<integer>"; inherits: true; initial-value: 7; }
+@property --demo-start { syntax: "<integer>"; inherits: true; initial-value: 3; }
+@property --demo-end { syntax: "<integer>"; inherits: true; initial-value: 8; }
+@property --demo-len { syntax: "<integer>"; inherits: true; initial-value: 5; }
 @property --demo-fill { syntax: "<percentage>"; inherits: true; initial-value: 0%; }
 @property --demo-saved { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --demo-busy { syntax: "<number>"; inherits: true; initial-value: 0; }
@@ -153,14 +153,14 @@ body {
 
 @keyframes demo {
   /* Drag the left handle in… */
-  0%, 6% { --demo-l: 0%; --demo-start: 0; --demo-len: 14; }
-  22% { --demo-l: 25%; --demo-start: 4; --demo-len: 10; }
+  0%, 6% { --demo-l: 0%; --demo-start: 0; --demo-len: 10; }
+  22% { --demo-l: 25%; --demo-start: 3; --demo-len: 7; }
   /* …then the right one. */
-  0%, 26% { --demo-r: 0%; --demo-end: 14; }
-  26% { --demo-len: 10; }
-  40%, 90% { --demo-r: 22%; --demo-end: 11; --demo-len: 7; }
-  90% { --demo-l: 25%; --demo-start: 4; }
-  97%, 100% { --demo-l: 0%; --demo-r: 0%; --demo-start: 0; --demo-end: 14; --demo-len: 14; }
+  0%, 26% { --demo-r: 0%; --demo-end: 10; }
+  26% { --demo-len: 7; }
+  40%, 90% { --demo-r: 22%; --demo-end: 8; --demo-len: 5; }
+  90% { --demo-l: 25%; --demo-start: 3; }
+  97%, 100% { --demo-l: 0%; --demo-r: 0%; --demo-start: 0; --demo-end: 10; --demo-len: 10; }
 
   /* The finger on each handle, then on Save. */
   0%, 3% { --demo-tap-l: 0; }

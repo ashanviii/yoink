@@ -59,6 +59,11 @@ const nextConfig: NextConfig = {
         source: "/ffmpeg/:path*",
         headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
+      {
+        // The showcase clip, poster and filmstrip; rename the files to replace them.
+        source: "/demo/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
+      },
     ];
   },
 };
