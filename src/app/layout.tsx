@@ -9,6 +9,7 @@ import "./globals.css";
 const body = Figtree({
   variable: "--font-body",
   subsets: ["latin"],
+  style: ["normal", "italic"],
   display: "swap",
 });
 

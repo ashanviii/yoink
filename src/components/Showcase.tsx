@@ -189,9 +189,9 @@ function PasteScreen() {
         Yoinkit
       </div>
       <div className="mt-12 text-center">
-        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ebe5d8] py-0.5 pl-0.5 pr-2.5 text-[10px] font-semibold">
-          <span className="rounded-full bg-[#ffc83d] px-1.5 py-px text-[9px] font-extrabold">Free</span>
-          No sign-up
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[#ebe5d8] py-0.5 pl-0.5 pr-2.5 text-[10px]">
+          <span className="rounded-full bg-[#ffc83d] px-1.5 py-px text-[9px] font-medium">Free</span>
+          <em>No sign-up</em>
         </span>
         <p className="mt-3 text-[25px] font-extrabold leading-[1.05] tracking-tight">Get exactly the part you want</p>
       </div>
