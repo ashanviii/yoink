@@ -19,6 +19,9 @@ const csp = [
   // ffmpeg.wasm needs to compile WebAssembly.
   `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' ${turnstile}${isDev ? " 'unsafe-eval'" : ""}`,
   `frame-src ${turnstile}`,
+  // ffmpeg.wasm's workers are files on this site; Mediabunny starts small helpers (its MP3
+  // encoder, timers that keep running in a background tab) from blob: URLs it creates.
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
