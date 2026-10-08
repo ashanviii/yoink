@@ -3,10 +3,12 @@ import { GIF_FPS, GIF_SIZE, MAX_EXTRACT_FRAMES, type CropParams, type DownloadRe
 import { zipBlob } from "@/lib/zip";
 import { fetchStream, type FetchedMedia } from "./fetch-media";
 import { preloadFFmpeg, withFFmpeg, type FFmpegJob } from "./ffmpeg";
+import { buildNative, nativeMayHandle, NativeUnsupported } from "./native";
 
 /**
  * Builds a download entirely in the browser: fetch the stream(s), then merge, trim,
- * convert or cut frames with ffmpeg.wasm when needed. The result never touches a server.
+ * convert or cut frames when needed, with the browser's own codecs (native.ts) where it
+ * can and ffmpeg.wasm otherwise. The result never touches a server.
  */
 
 export interface BuildUpdate {
@@ -360,7 +362,8 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
     // Frames and GIFs only need the picture.
     const streams = params.frames || params.format === "gif" ? recipe.streams.slice(0, 1) : recipe.streams;
     const mayProcess = !!params.frames || !!params.format || editsVideo(params) || recipe.mode !== "video" || streams.length > 1 || streams[0].hls || streams[0].ext !== "mp4";
-    if (mayProcess) preloadFFmpeg(); // loads while the media downloads
+    // ffmpeg is the fallback; only fetch it up front when the browser's own codecs can't do the job.
+    if (mayProcess && !nativeMayHandle(params)) preloadFFmpeg(); // loads while the media downloads
 
     report({ status: "downloading", progress: 0 });
     const fetched = params.frames
@@ -377,10 +380,25 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
 
     const inputs = fetched.map((media, i) => ({ name: `${i === 0 ? "v" : "a"}.${media.ext}`, data: media.blob }));
 
-    let blob: Blob;
+    let blob: Blob | null = null;
     if (savesAsIs(recipe, fetched, params)) {
       blob = new Blob([fetched[0].blob], { type: MIME.mp4 });
-    } else {
+    } else if (nativeMayHandle(params) || recipe.mode === "audio-m4a") {
+      report({ status: "processing" });
+      try {
+        const built = await buildNative(recipe, fetched, params, {
+          signal,
+          onProgress: (fraction) => report({ status: "processing", progress: fraction * 100 }),
+        });
+        blob = new Blob([built], { type: MIME[ext] });
+      } catch (err) {
+        if (signal.aborted || err instanceof ApiError) throw err;
+        // Anything the browser's codecs can't do (or choke on) goes to ffmpeg instead.
+        if (!(err instanceof NativeUnsupported)) console.warn("[yoink] native build failed, using ffmpeg", err);
+        report({ status: "processing", progress: 0 });
+      }
+    }
+    if (!blob) {
       const kbps = sourceKbps(recipe, fetched);
       blob = await withFFmpeg(
         inputs,

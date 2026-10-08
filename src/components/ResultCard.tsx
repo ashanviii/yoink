@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { preloadFFmpeg } from "@/lib/client/ffmpeg";
+import { nativeMayHandle } from "@/lib/client/native";
 import { formatDuration } from "@/lib/format";
 import type { CropParams, MediaItem, OptionKind, TrimParams } from "@/lib/media-types";
 import { CropEditor } from "./CropEditor";
@@ -42,11 +43,12 @@ export function ResultCard({ item, uploader, index, total }: Props) {
   const duration = formatDuration(item.durationSec);
   const portrait = item.width && item.height ? item.height > item.width : false;
 
-  // Fetch the video processor before the tap that needs it: when the best quality has to be
-  // merged (separate video and sound) or remuxed, or as soon as any edit is switched on.
+  // Fetch ffmpeg before the tap that needs it, when the browser's own codecs can't do the job:
+  // the best quality has to be merged or remuxed, or an edit is switched on.
   const bestStreams = bestVideo?.recipe.streams ?? [];
   const needsProcessor =
-    bestStreams.length > 1 || bestStreams.some((s) => s.hls || s.ext !== "mp4") || !!(trimParams || cropParams || Object.keys(tweaks).length);
+    (bestStreams.length > 1 || bestStreams.some((s) => s.hls || s.ext !== "mp4") || !!(trimParams || cropParams || Object.keys(tweaks).length)) &&
+    !nativeMayHandle(edits);
   useEffect(() => {
     if (!needsProcessor) return;
     const timer = setTimeout(preloadFFmpeg, 600);
