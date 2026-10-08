@@ -66,9 +66,3 @@ export const PLATFORMS: Record<PlatformId, Platform> = {
     watermarkFree: true,
   },
 };
-
-export const PLATFORM_LIST: readonly Platform[] = Object.values(PLATFORMS);
-
-export function isPlatformId(value: unknown): value is PlatformId {
-  return typeof value === "string" && value in PLATFORMS;
-}
