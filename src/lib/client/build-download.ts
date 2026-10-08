@@ -189,22 +189,34 @@ function audioFilters(params: JobParams): string[] {
   return [trimFilter(params, "audio"), speed && `atempo=${speed}`, volume && `volume=${volume}`].filter((f): f is string => !!f);
 }
 
+/**
+ * H.264 settings. In the browser, ultrafast encodes ~4x quicker than veryfast but spends bits
+ * freely, so its bitrate is capped near the source's (the result is still a bit smaller than
+ * veryfast's). Without a known source bitrate, superfast keeps the size in check on its own.
+ */
+function h264Args(sourceKbps: number | null): string[] {
+  if (!sourceKbps) return ["-c:v", "libx264", "-preset", "superfast", "-crf", "22", "-pix_fmt", "yuv420p"];
+  const cap = Math.round(Math.max(1500, sourceKbps * 1.5));
+  return ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "23", "-maxrate", `${cap}k`, "-bufsize", `${cap * 2}k`, "-pix_fmt", "yuv420p"];
+}
+
 const CODECS = {
   mp4: {
-    video: ["-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p"],
+    video: h264Args,
     audio: ["-c:a", "aac", "-b:a", "192k"],
     extra: ["-movflags", "+faststart"],
   },
-  // VP8 at libvpx's fastest settings: VP9 is far too slow to encode in a browser.
+  // VP8 at libvpx's fastest settings: VP9 is far too slow to encode in a browser. Vorbis, because
+  // the wasm build's libopus crashes ("memory access out of bounds") on every input.
   webm: {
-    video: ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-crf", "10", "-b:v", "3M", "-pix_fmt", "yuv420p"],
-    audio: ["-c:a", "libopus", "-b:a", "128k"],
+    video: () => ["-c:v", "libvpx", "-deadline", "realtime", "-cpu-used", "8", "-crf", "10", "-b:v", "3M", "-pix_fmt", "yuv420p"],
+    audio: ["-c:a", "libvorbis", "-q:a", "4"],
     extra: [],
   },
 } as const;
 
 /** Re-encodes the video with the chosen trim, crop, flip, rotation, speed and volume, as MP4 or WebM. */
-function editArgs(inputs: string[], params: JobParams, out: string, container: keyof typeof CODECS): string[] {
+function editArgs(inputs: string[], params: JobParams, out: string, container: keyof typeof CODECS, sourceKbps: number | null): string[] {
   const video = videoFilters(params).join(",");
   // Audio filters are ignored when the video has no sound.
   const audio = audioFilters(params).join(",");
@@ -219,7 +231,7 @@ function editArgs(inputs: string[], params: JobParams, out: string, container: k
     "-map",
     "0:v:0",
     ...(muted ? ["-an"] : ["-map", inputs.length > 1 ? "1:a:0?" : "0:a:0?", ...codecs.audio]),
-    ...(copyVideo ? ["-c:v", "copy"] : codecs.video),
+    ...(copyVideo ? ["-c:v", "copy"] : codecs.video(sourceKbps)),
     ...codecs.extra,
     "-y",
     out,
@@ -261,8 +273,21 @@ function savesAsIs(recipe: DownloadRecipe, fetched: FetchedMedia[], params: JobP
   );
 }
 
+/** How long the output will be, for processing progress. */
+function outputSeconds(recipe: DownloadRecipe, params: JobParams): number | undefined {
+  if (!recipe.durationSec) return undefined;
+  if (recipe.mode !== "video") return recipe.durationSec;
+  const clip = params.trim ? params.trim.end - params.trim.start : recipe.durationSec;
+  return clip / (params.speed ?? 1);
+}
+
+/** The video stream's bitrate in kbps, from its size and the item's duration. */
+function sourceKbps(recipe: DownloadRecipe, fetched: FetchedMedia[]): number | null {
+  return recipe.durationSec ? (fetched[0].blob.size * 8) / 1000 / recipe.durationSec : null;
+}
+
 /** ffmpeg args turning the fetched inputs into the requested file. */
-function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams, out: string): string[] {
+function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams, out: string, kbps: number | null): string[] {
   if (recipe.mode === "audio-mp3") {
     return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "libmp3lame", "-q:a", "0", ...metadataArgs(recipe.meta), "-y", out];
   }
@@ -270,8 +295,8 @@ function convertArgs(recipe: DownloadRecipe, inputs: string[], params: JobParams
     return ["-i", inputs[0], "-vn", "-map", "0:a:0", "-c:a", "copy", ...metadataArgs(recipe.meta), "-movflags", "+faststart", "-y", out];
   }
   if (params.format === "gif") return gifArgs(inputs, params, out);
-  if (params.format === "webm") return editArgs(inputs, params, out, "webm");
-  if (editsVideo(params)) return editArgs(inputs, params, out, "mp4");
+  if (params.format === "webm") return editArgs(inputs, params, out, "webm", kbps);
+  if (editsVideo(params)) return editArgs(inputs, params, out, "mp4", kbps);
   if (inputs.length > 1) {
     return ["-i", inputs[0], "-i", inputs[1], "-map", "0:v:0", "-map", "1:a:0", "-c", "copy", "-movflags", "+faststart", "-y", out];
   }
@@ -319,8 +344,12 @@ async function fetchAll(streams: StreamRef[], signal: AbortSignal, onProgress: (
 export async function buildDownload(recipe: DownloadRecipe, params: JobParams, { signal, onUpdate }: BuildOptions): Promise<BuiltFile> {
   let progress = 0;
   let status: JobStatus = "downloading";
+  // Each stage has its own bar; within one, progress only moves forward.
   const report = (next: Partial<BuildUpdate>) => {
-    status = next.status ?? status;
+    if (next.status && next.status !== status) {
+      status = next.status;
+      progress = 0;
+    }
     if (next.progress !== undefined && next.progress !== null) progress = Math.max(progress, Math.min(next.progress, 99));
     onUpdate({ status, progress });
   };
@@ -352,7 +381,7 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
     if (savesAsIs(recipe, fetched, params)) {
       blob = new Blob([fetched[0].blob], { type: MIME.mp4 });
     } else {
-      report({ status: "processing" });
+      const kbps = sourceKbps(recipe, fetched);
       blob = await withFFmpeg(
         inputs,
         async (job) => {
@@ -361,10 +390,16 @@ export async function buildDownload(recipe: DownloadRecipe, params: JobParams, {
           if (params.frames?.mode === "single") return singleFrame(job, paths[0], params.frames.at, params.frames.format);
           if (params.frames?.mode === "interval") return frameSet(job, paths[0], params.frames.every, params.frames.format);
           const out = `${job.outDir}/out.${ext}`;
-          await job.exec(convertArgs(recipe, paths, params, out));
+          await job.exec(convertArgs(recipe, paths, params, out, kbps), outputSeconds(recipe, params));
           return new Blob([await job.readFile(out)], { type: MIME[ext] });
         },
-        { signal, onWait: () => report({ status: "queued" }) },
+        {
+          signal,
+          onWait: () => report({ status: "queued" }),
+          // Only fires while the processor itself is still downloading.
+          onLoading: (fraction) => report({ status: "preparing", progress: fraction === null ? null : fraction * 100 }),
+          onProgress: (fraction) => report({ status: "processing", progress: fraction * 100 }),
+        },
       );
     }
 

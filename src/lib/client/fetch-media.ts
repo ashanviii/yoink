@@ -13,6 +13,17 @@ export interface FetchOptions {
   onProgress?: (fraction: number | null) => void;
 }
 
+/** One attempt's options: its own signal, and `beat` to call whenever bytes arrive. */
+interface AttemptOptions extends FetchOptions {
+  signal: AbortSignal;
+  beat: () => void;
+}
+
+/** A connection that goes this long without sending a byte is given up on rather than waited for forever. */
+const STALL_MS = 30_000;
+
+class StalledError extends Error {}
+
 /** CDN hosts that refused a direct read (no CORS) this session; later fetches go straight to the proxy. */
 const corsBlocked = new Set<string>();
 const hostOf = (url: string) => new URL(url).host;
@@ -81,9 +92,35 @@ async function readBody(response: Response, onBytes: (loaded: number, total: num
   return new Blob(parts, { type: response.headers.get("content-type")?.split(";")[0] ?? "" });
 }
 
-async function fetchFile(url: string, direct: boolean, { signal, onProgress }: FetchOptions): Promise<Blob> {
+async function fetchFile(url: string, direct: boolean, { signal, onProgress, beat }: AttemptOptions): Promise<Blob> {
   const response = await get(url, direct, signal);
-  return readBody(response, (loaded, total) => onProgress?.(total ? Math.min(1, loaded / total) : null));
+  return readBody(response, (loaded, total) => {
+    beat();
+    onProgress?.(total ? Math.min(1, loaded / total) : null);
+  });
+}
+
+/** Runs one fetch attempt, aborting it if no bytes arrive for STALL_MS. */
+async function guarded<T>(outer: AbortSignal | undefined, attempt: (signal: AbortSignal, beat: () => void) => Promise<T>): Promise<T> {
+  const controller = new AbortController();
+  const onAbort = () => controller.abort(outer?.reason);
+  outer?.addEventListener("abort", onAbort, { once: true });
+  let lastBeat = Date.now();
+  let stalled = false;
+  const timer = setInterval(() => {
+    if (Date.now() - lastBeat < STALL_MS) return;
+    stalled = true;
+    controller.abort();
+  }, 2_000);
+  try {
+    return await attempt(controller.signal, () => (lastBeat = Date.now()));
+  } catch (err) {
+    if (stalled && !outer?.aborted) throw new StalledError("no data for 30s");
+    throw err;
+  } finally {
+    clearInterval(timer);
+    outer?.removeEventListener("abort", onAbort);
+  }
 }
 
 interface Segment {
@@ -99,8 +136,12 @@ function parseAttribute(line: string, name: string): string | undefined {
 }
 
 /** Downloads every segment of an HLS stream (highest-bandwidth variant) and joins them. */
-async function fetchHls(url: string, direct: boolean, { signal, onProgress }: FetchOptions): Promise<FetchedMedia> {
-  const text = async (target: string) => (await get(target, direct, signal)).text();
+async function fetchHls(url: string, direct: boolean, { signal, onProgress, beat }: AttemptOptions): Promise<FetchedMedia> {
+  const text = async (target: string) => {
+    const body = await (await get(target, direct, signal)).text();
+    beat();
+    return body;
+  };
   let playlistUrl = url;
   let playlist = await text(playlistUrl);
 
@@ -143,7 +184,7 @@ async function fetchHls(url: string, direct: boolean, { signal, onProgress }: Fe
   }
   if (segments.length === 0) throw new ApiError("NO_MEDIA", "We couldn't find any downloadable video or audio in that link.");
 
-  const fetchSegment = async (segment: Segment) => readBody(await get(segment.url, direct, signal, segment.range), () => {});
+  const fetchSegment = async (segment: Segment) => readBody(await get(segment.url, direct, signal, segment.range), beat);
   const parts: Blob[] = new Array(segments.length);
   let done = 0;
   let next = 0;
@@ -169,12 +210,19 @@ export async function fetchStream(ref: StreamRef, options: FetchOptions = {}): P
   const candidates = streamUrls(ref);
   for (const [index, { url, direct }] of candidates.entries()) {
     try {
-      if (ref.hls) return await fetchHls(url, direct, options);
-      return { blob: await fetchFile(url, direct, options), ext: ref.ext };
+      return await guarded(options.signal, async (signal, beat) => {
+        const attempt = { ...options, signal, beat };
+        if (ref.hls) return await fetchHls(url, direct, attempt);
+        return { blob: await fetchFile(url, direct, attempt), ext: ref.ext };
+      });
     } catch (err) {
-      if (isAbort(err) || !direct || index === candidates.length - 1) throw err;
-      // A network-level failure on a reachable CDN is almost always CORS.
-      if (!(err instanceof DirectHttpError)) markCorsBlocked(url);
+      if (options.signal?.aborted || (isAbort(err) && !(err instanceof StalledError))) throw err;
+      if (!direct || index === candidates.length - 1) {
+        if (err instanceof StalledError) throw new ApiError("NETWORK", "The download stalled. Check your connection and try again.");
+        throw err;
+      }
+      // A network-level failure on a reachable CDN is almost always CORS; a stall or HTTP error isn't.
+      if (!(err instanceof DirectHttpError) && !(err instanceof StalledError)) markCorsBlocked(url);
       options.onProgress?.(0);
     }
   }

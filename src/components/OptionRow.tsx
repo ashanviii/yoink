@@ -8,6 +8,7 @@ import { useDownloadJob } from "./useDownloadJob";
 const STAGE_LABEL: Record<string, string> = {
   queued: "In line…",
   downloading: "Yoinking…",
+  preparing: "Getting the editor ready…",
   processing: "Stitching it together…",
 };
 
@@ -74,7 +75,7 @@ export function JobRow({
           </div>
           <p className="truncate text-xs text-muted" aria-live="polite">
             {busy
-              ? `${stage}${state.job?.status === "downloading" ? ` ${Math.round(progress)}%` : ""}`
+              ? `${stage}${status === "downloading" || progress > 0 ? ` ${Math.round(progress)}%` : ""}`
               : state.phase === "error"
                 ? <span className="text-danger">{state.error}</span>
                 : state.phase === "ready"

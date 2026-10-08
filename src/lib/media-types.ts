@@ -88,6 +88,8 @@ export interface DownloadRecipe {
   stem: string;
   /** Human label used in the filename, e.g. "1080p" ("" for none). */
   label: string;
+  /** The whole item's length, for processing progress and the source bitrate; null when unknown. */
+  durationSec: number | null;
   /** Written into audio files' tags. */
   meta: { title: string | null; artist: string | null; url: string };
 }
@@ -135,7 +137,7 @@ export interface ResolveResponse {
   items: MediaItem[];
 }
 
-export type JobStatus = "queued" | "downloading" | "processing" | "ready" | "error";
+export type JobStatus = "queued" | "downloading" | "preparing" | "processing" | "ready" | "error";
 
 /** Progress of a download being built in the browser. */
 export interface JobState {

@@ -197,6 +197,7 @@ function buildOptions(info: RawInfo, ctx: BuildContext): MediaOption[] {
     mode,
     stem: fileStem,
     label: label === "audio" || label === "best" ? "" : label,
+    durationSec: duration,
     meta: {
       title: cleanTitle(info.title),
       artist: info.uploader ?? info.channel ?? ctx.uploader,
