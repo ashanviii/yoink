@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Hero } from "@/components/Hero";
-import { FaqSection, Features, JsonLd, PlatformGrid, Steps } from "@/components/sections";
+import { FaqSection, Features, GetStarted, JsonLd, PlatformGrid, Steps } from "@/components/sections";
 import { LANDING_PAGES, getLandingPage } from "@/lib/landing-pages";
 import { pageMetadata } from "@/lib/seo";
 import { breadcrumbSchema, faqSchema, howToSchema, webAppSchema } from "@/lib/structured-data";
@@ -44,7 +44,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
           ]),
         ]}
       />
-      <nav aria-label="Breadcrumb" className="mx-auto max-w-5xl px-4 pt-6 text-xs text-muted">
+      <nav aria-label="Breadcrumb" className="mx-auto max-w-6xl px-4 pt-6 text-sm text-muted sm:px-6">
         <ol className="flex items-center gap-1.5">
           <li>
             <Link href="/" className="hover:text-text">Yoinkit</Link>
@@ -66,6 +66,7 @@ export default async function LandingPage(props: PageProps<"/[slug]">) {
       <Features features={page.features} />
       <FaqSection faqs={page.faqs} />
       <PlatformGrid links={siblings} title="More downloaders" />
+      <GetStarted />
     </>
   );
 }

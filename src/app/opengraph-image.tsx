@@ -18,23 +18,31 @@ export default function OpengraphImage() {
           flexDirection: "column",
           justifyContent: "space-between",
           padding: 72,
-          background: "#0b0b0f",
-          color: "#f4f3f8",
+          background: "#fff7e0",
+          color: "#1d1b16",
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <BrandMark size={72} radius={20} glyph={48} />
           <div style={{ fontSize: 56, fontWeight: 800 }}>Yoinkit</div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Get exactly</div>
-          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: "#a78bfa" }}>
-            the part you want.
-          </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <div style={{ fontSize: 92, fontWeight: 800, lineHeight: 1.02, letterSpacing: -3 }}>Get exactly</div>
+          <div style={{ fontSize: 92, fontWeight: 800, lineHeight: 1.02, letterSpacing: -3 }}>the part you want.</div>
         </div>
         <div style={{ display: "flex", gap: 16 }}>
-          {PILLS.map((pill) => (
-            <div key={pill} style={{ padding: "12px 24px", borderRadius: 999, border: "2px solid #2a2a36", fontSize: 28 }}>
+          {PILLS.map((pill, i) => (
+            <div
+              key={pill}
+              style={{
+                padding: "12px 28px",
+                borderRadius: 999,
+                fontSize: 28,
+                fontWeight: 700,
+                background: i === 0 ? "#1d1b16" : "#ffc83d",
+                color: i === 0 ? "#ffffff" : "#1d1b16",
+              }}
+            >
               {pill}
             </div>
           ))}

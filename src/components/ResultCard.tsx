@@ -57,12 +57,12 @@ export function ResultCard({ item, uploader, index, total }: Props) {
 
   return (
     <article
-      className="animate-rise overflow-hidden rounded-xl border border-border bg-surface"
+      className="animate-rise overflow-hidden rounded-[2rem] border border-border bg-surface shadow-card"
       style={{ animationDelay: `${index * 70}ms` }}
     >
-      <div className="grid gap-4 p-3 sm:grid-cols-[minmax(0,220px)_1fr] sm:p-4">
+      <div className="grid gap-5 p-3 sm:grid-cols-[minmax(0,230px)_1fr] sm:p-5">
         <div
-          className={`relative overflow-hidden rounded-lg bg-surface-2 ${portrait ? "mx-auto aspect-[9/16] max-h-80 w-auto sm:max-h-none sm:w-full" : "aspect-video"}`}
+          className={`relative overflow-hidden rounded-3xl bg-surface-2 ${portrait ? "mx-auto aspect-[9/16] max-h-80 w-auto sm:max-h-none sm:w-full" : "aspect-video"}`}
         >
           {item.thumbnail ? (
             // Thumbnails come from our same-origin proxy and vary per platform; next/image adds nothing here.
@@ -74,12 +74,12 @@ export function ResultCard({ item, uploader, index, total }: Props) {
             </div>
           )}
           {duration && (
-            <span className="absolute bottom-2 right-2 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="absolute bottom-2.5 right-2.5 rounded-full bg-black/70 px-2 py-0.5 text-xs font-bold text-white">
               {duration}
             </span>
           )}
           {total > 1 && (
-            <span className="absolute left-2 top-2 rounded-md bg-black/75 px-1.5 py-0.5 text-xs font-semibold text-white">
+            <span className="absolute left-2.5 top-2.5 rounded-full bg-black/70 px-2 py-0.5 text-xs font-bold text-white">
               {index + 1}/{total}
             </span>
           )}
@@ -89,12 +89,12 @@ export function ResultCard({ item, uploader, index, total }: Props) {
 
         <div className="flex min-w-0 flex-col gap-3">
           <div className="px-1 pt-1">
-            <h2 className="line-clamp-2 text-lg font-semibold leading-snug">{item.title}</h2>
+            <h2 className="line-clamp-2 font-display text-xl font-extrabold leading-snug">{item.title}</h2>
             {uploader && <p className="mt-1 truncate text-sm text-muted">by {uploader}</p>}
           </div>
 
           {tabs.length > 1 && (
-            <div role="tablist" aria-label="Format" className="inline-flex w-fit rounded-lg bg-surface-2 p-1">
+            <div role="tablist" aria-label="Format" className="inline-flex w-fit rounded-full bg-surface-2 p-1">
               {tabs.map((kind) => {
                 const Icon = TAB_ICON[kind];
                 return (
@@ -106,8 +106,8 @@ export function ResultCard({ item, uploader, index, total }: Props) {
                     aria-selected={active === kind}
                     aria-controls={`${tabsId}-panel-${kind}`}
                     onClick={() => setTab(kind)}
-                    className={`flex items-center gap-1.5 rounded-md px-3.5 py-1.5 text-sm font-medium transition sm:px-4 ${
-                      active === kind ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"
+                    className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold transition sm:px-5 ${
+                      active === kind ? "bg-text text-bg" : "text-muted hover:text-text"
                     }`}
                   >
                     <Icon size={15} />

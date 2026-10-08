@@ -2,43 +2,41 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { Faq } from "@/lib/landing-pages";
 import type { PlatformId } from "@/lib/platforms";
-import { ArrowIcon, DownloadIcon, FilmIcon, LinkIcon, PlatformIcon } from "./icons";
+import { ArrowIcon, PlatformIcon } from "./icons";
 
-/** A page section: heading in a narrow left column, content on the right (stacked on mobile). */
-export function Section({ title, id, children }: { title: string; id: string; children: ReactNode }) {
+/** A page section: a big heading (and optional intro) above its content. */
+export function Section({ title, id, intro, children }: { title: string; id: string; intro?: ReactNode; children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="reveal mx-auto max-w-5xl px-4 pt-16 sm:pt-20">
-      <div className="grid gap-5 border-t border-border pt-6 md:grid-cols-[13rem_1fr] md:gap-10">
-        <h2 id={id} className="font-display text-2xl font-bold leading-tight">
-          {title}
-        </h2>
-        <div className="min-w-0">{children}</div>
-      </div>
+    <section aria-labelledby={id} className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 sm:pt-28">
+      <h2 id={id} className="max-w-2xl font-display text-[2rem] font-extrabold leading-[1.08] sm:text-[2.75rem]">
+        {title}
+      </h2>
+      {intro && <div className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">{intro}</div>}
+      <div className="mt-8 min-w-0 sm:mt-10">{children}</div>
     </section>
   );
 }
 
-/** Every page's steps are copy the link, pick the part, save it. */
-const STEP_ICONS = [LinkIcon, FilmIcon, DownloadIcon];
-
-const card =
-  "rounded-2xl border border-border bg-surface p-5 transition duration-300 hover:-translate-y-1 hover:border-text/25 hover:shadow-[0_14px_30px_-18px_rgb(0_0_0/0.4)]";
+/** "Paste the link. Copy it from…" → a short title and the rest as its explanation. */
+function splitStep(step: string): { title: string; body: string } {
+  const at = step.indexOf(". ");
+  if (at === -1) return { title: step.replace(/\.$/, ""), body: "" };
+  return { title: step.slice(0, at), body: step.slice(at + 2) };
+}
 
 export function Steps({ steps }: { steps: readonly string[] }) {
   return (
     <Section title="How it works" id="how-heading">
-      <ol className="grid gap-3 sm:grid-cols-3">
+      <ol className="grid gap-4 md:grid-cols-3">
         {steps.map((step, i) => {
-          const Icon = STEP_ICONS[i] ?? DownloadIcon;
+          const { title, body } = splitStep(step);
           return (
-            <li key={step} className={`group ${card}`}>
-              <div className="flex items-center gap-3">
-                <span className="grid size-10 place-items-center rounded-xl bg-accent text-accent-ink transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
-                  <Icon size={19} />
-                </span>
-                <span className="font-display text-sm font-bold text-muted tabular-nums">Step {i + 1}</span>
-              </div>
-              <p className="mt-3 text-[15px] leading-relaxed">{step}</p>
+            <li key={step} className="rounded-[2rem] bg-surface-2 p-7">
+              <span className="grid size-11 place-items-center rounded-full bg-accent font-display text-lg font-extrabold text-accent-ink">
+                {i + 1}
+              </span>
+              <h3 className="mt-6 font-display text-xl font-extrabold leading-snug">{title}</h3>
+              {body && <p className="mt-2 text-[15px] leading-relaxed text-muted">{body}</p>}
             </li>
           );
         })}
@@ -50,14 +48,14 @@ export function Steps({ steps }: { steps: readonly string[] }) {
 export function Features({ features }: { features: readonly { title: string; body: string }[] }) {
   return (
     <Section title="What you get" id="features-heading">
-      <dl className="grid gap-3 sm:grid-cols-2">
-        {features.map((feature) => (
-          <div key={feature.title} className={`${card} sm:[&:last-child:nth-child(odd)]:col-span-2`}>
-            <dt className="flex items-center gap-2.5 font-semibold">
-              <span aria-hidden className="size-2.5 shrink-0 rotate-45 rounded-[3px] bg-accent" />
-              {feature.title}
-            </dt>
-            <dd className="mt-1.5 text-[15px] leading-relaxed text-muted">{feature.body}</dd>
+      <dl className="grid gap-4 sm:grid-cols-2">
+        {features.map((feature, i) => (
+          <div
+            key={feature.title}
+            className={`rounded-[2rem] p-7 sm:p-8 ${i % 3 === 0 ? "bg-accent-soft" : "bg-surface-2"} sm:[&:last-child:nth-child(odd)]:col-span-2`}
+          >
+            <dt className="font-display text-2xl font-extrabold leading-tight">{feature.title}</dt>
+            <dd className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">{feature.body}</dd>
           </div>
         ))}
       </dl>
@@ -68,16 +66,19 @@ export function Features({ features }: { features: readonly { title: string; bod
 export function FaqSection({ faqs }: { faqs: readonly Faq[] }) {
   return (
     <Section title="Questions" id="faq-heading">
-      <div className="divide-y divide-border border-b border-border">
+      <div className="max-w-3xl space-y-3">
         {faqs.map((faq, i) => (
-          <details key={faq.q} className="group" open={i === 0}>
-            <summary className="flex cursor-pointer list-none items-start justify-between gap-4 py-4 font-semibold [&::-webkit-details-marker]:hidden">
-              <h3 className="text-[15px] group-hover:underline group-hover:underline-offset-4">{faq.q}</h3>
-              <span aria-hidden className="text-lg leading-none text-muted transition-transform group-open:rotate-45">
+          <details key={faq.q} className="group rounded-3xl bg-surface-2 px-6" open={i === 0}>
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 py-5 [&::-webkit-details-marker]:hidden">
+              <h3 className="font-display text-[17px] font-bold">{faq.q}</h3>
+              <span
+                aria-hidden
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-lg leading-none transition-transform group-open:rotate-45"
+              >
                 +
               </span>
             </summary>
-            <p className="max-w-2xl pb-5 text-[15px] leading-relaxed text-muted">{faq.a}</p>
+            <p className="max-w-2xl pb-6 text-[15px] leading-relaxed text-muted">{faq.a}</p>
           </details>
         ))}
       </div>
@@ -92,19 +93,26 @@ export interface PlatformLink {
   blurb: string;
 }
 
-export function PlatformGrid({ links, title = "Platforms" }: { links: PlatformLink[]; title?: string }) {
+export function PlatformGrid({ links, title = "Pick your app" }: { links: PlatformLink[]; title?: string }) {
   return (
     <Section title={title} id="platforms-heading">
-      <ul className="grid gap-x-10 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
+      <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {links.map((link) => (
-          <li key={link.href} className="border-b border-border">
-            <Link href={link.href} className="group flex items-center gap-3 py-3.5">
-              <PlatformIcon platform={link.platform} size={36} className="size-9 shrink-0 rounded-lg" />
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold group-hover:underline group-hover:underline-offset-4">{link.label}</span>
-                <span className="block text-sm text-muted">{link.blurb}</span>
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="group flex h-full flex-col gap-5 rounded-[2rem] border border-border p-6 transition hover:border-transparent hover:bg-surface-2"
+            >
+              <div className="flex items-center justify-between">
+                <PlatformIcon platform={link.platform} size={52} className="size-13 rounded-2xl" />
+                <span className="grid size-10 place-items-center rounded-full bg-surface-2 transition group-hover:bg-text group-hover:text-bg">
+                  <ArrowIcon size={17} />
+                </span>
+              </div>
+              <span>
+                <span className="block font-display text-xl font-extrabold">{link.label}</span>
+                <span className="mt-1 block text-[15px] leading-relaxed text-muted">{link.blurb}</span>
               </span>
-              <ArrowIcon size={16} className="shrink-0 text-muted transition-transform group-hover:translate-x-0.5 group-hover:text-text" />
             </Link>
           </li>
         ))}
@@ -123,37 +131,62 @@ export interface SupportRow {
 /** Plain-text, quotable summary of exactly what the tool does — easy for search engines and AI assistants to lift. */
 export function SupportTable({ rows }: { rows: readonly SupportRow[] }) {
   return (
-    <Section title="What it can download" id="support-heading">
-      <p className="mb-6 max-w-2xl text-[15px] leading-relaxed text-muted">
-        Yoinkit is a free video downloader and editor that works in any browser, built for phones first. Paste a public
-        link from Instagram, TikTok, Facebook, Snapchat or Pinterest, trim or crop it if you like, and save it as MP4, GIF
-        or WebM, the sound as MP3, or a frame as JPG or PNG. It needs no account, no app and no login, and it only works
-        with public content.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[34rem] text-left text-sm">
+    <Section
+      title="What it can download"
+      id="support-heading"
+      intro={
+        <p>
+          Yoinkit is a free video downloader and editor that works in any browser, built for phones first. Paste a public
+          link from Instagram, TikTok, Facebook, Snapchat or Pinterest, trim or crop it if you like, and save it as MP4, GIF
+          or WebM, the sound as MP3, or a frame as JPG or PNG. It needs no account, no app and no login, and it only works
+          with public content.
+        </p>
+      }
+    >
+      <div className="overflow-x-auto rounded-[2rem] border border-border">
+        <table className="w-full min-w-[34rem] text-left text-[15px]">
           <caption className="sr-only">Supported platforms and content types</caption>
-          <thead className="border-b border-border text-xs text-muted">
+          <thead className="bg-surface-2 text-sm text-muted">
             <tr>
-              <th scope="col" className="py-2.5 pr-4 font-medium">Platform</th>
-              <th scope="col" className="py-2.5 pr-4 font-medium">Supported</th>
-              <th scope="col" className="py-2.5 font-medium">Not supported</th>
+              <th scope="col" className="px-6 py-4 font-semibold">Platform</th>
+              <th scope="col" className="px-6 py-4 font-semibold">Supported</th>
+              <th scope="col" className="px-6 py-4 font-semibold">Not supported</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border border-b border-border">
+          <tbody className="divide-y divide-border">
             {rows.map((row) => (
               <tr key={row.href} className="align-top">
-                <th scope="row" className="py-3 pr-4 font-semibold">
+                <th scope="row" className="px-6 py-4 font-bold">
                   <Link href={row.href} className="hover:underline hover:underline-offset-4">{row.platform}</Link>
                 </th>
-                <td className="py-3 pr-4">{row.supported}</td>
-                <td className="py-3 text-muted">{row.notSupported}</td>
+                <td className="px-6 py-4">{row.supported}</td>
+                <td className="px-6 py-4 text-muted">{row.notSupported}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
     </Section>
+  );
+}
+
+/** Closing band that sends people back up to the link box. */
+export function GetStarted() {
+  return (
+    <section className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 sm:pt-28">
+      <div className="flex flex-col items-start gap-6 rounded-[2.5rem] bg-cream px-7 py-12 sm:flex-row sm:items-center sm:justify-between sm:px-12 sm:py-14">
+        <div>
+          <h2 className="font-display text-[2rem] font-extrabold leading-[1.08] sm:text-[2.5rem]">Got a link? Let&apos;s get your clip.</h2>
+          <p className="mt-3 text-lg text-muted">Free, no sign-up, and it works right in your phone&apos;s browser.</p>
+        </div>
+        <a
+          href="#media-url"
+          className="inline-flex h-14 shrink-0 items-center gap-2 rounded-full bg-text px-7 text-base font-bold text-bg transition hover:opacity-90"
+        >
+          Paste a link <ArrowIcon size={18} />
+        </a>
+      </div>
+    </section>
   );
 }
 

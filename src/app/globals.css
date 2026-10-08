@@ -2,33 +2,41 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * Warm and light: white pages, cream bands, one golden yellow, near-black text and
+ * black pill buttons. Yellow is a background (bands, highlights, the logo), never text.
+ */
 :root {
-  --bg: #f6f4ee;
+  --bg: #ffffff;
   --surface: #ffffff;
-  --surface-2: #efece4;
-  --text: #0e0e11;
-  --muted: #5d5b66;
-  --border: #e2ded3;
-  --accent: #a78bfa;
-  --accent-ink: #0e0e11;
-  --danger: #d62d30;
-  --ring: #0e0e11;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.06);
+  --surface-2: #f8f5ee;
+  --cream: #fff7e0;
+  --text: #1d1b16;
+  --muted: #6b665c;
+  --border: #ebe5d8;
+  --accent: #ffc83d;
+  --accent-soft: #fff0c2;
+  --accent-ink: #1d1b16;
+  --danger: #c8372b;
+  --ring: #1d1b16;
+  --shadow: 0 1px 2px rgb(29 27 22 / 0.05), 0 8px 24px -12px rgb(29 27 22 / 0.12);
   color-scheme: light;
 }
 
 .dark {
-  --bg: #0b0b0f;
-  --surface: #15151c;
-  --surface-2: #1d1d26;
-  --text: #f4f3f8;
-  --muted: #a09fb0;
-  --border: #2a2a36;
-  --accent: #a78bfa;
-  --accent-ink: #0b0b0f;
-  --danger: #ff5c5f;
-  --ring: #a78bfa;
-  --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+  --bg: #121110;
+  --surface: #1c1a17;
+  --surface-2: #24211d;
+  --cream: #1f1b13;
+  --text: #f7f3ea;
+  --muted: #aba597;
+  --border: #34302a;
+  --accent: #ffc83d;
+  --accent-soft: #3a3019;
+  --accent-ink: #1d1b16;
+  --danger: #ff6b5c;
+  --ring: #ffc83d;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px -12px rgb(0 0 0 / 0.5);
   color-scheme: dark;
 }
 
@@ -36,14 +44,16 @@
   --color-bg: var(--bg);
   --color-surface: var(--surface);
   --color-surface-2: var(--surface-2);
+  --color-cream: var(--cream);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-accent-ink: var(--accent-ink);
   --color-danger: var(--danger);
   --font-sans: var(--font-body);
-  --font-display: var(--font-display);
+  --font-display: var(--font-body);
   --shadow-card: var(--shadow);
 
   --animate-shake: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
@@ -68,25 +78,6 @@
   @keyframes stripes {
     from { background-position: 0 0; }
     to { background-position: 28px 0; }
-  }
-  @keyframes bob {
-    0%, 100% { translate: 0 0; }
-    50% { translate: 0 -12px; }
-  }
-  @keyframes drift {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(4%, 6%) scale(1.08); }
-  }
-  @keyframes marquee {
-    to { transform: translateX(-50%); }
-  }
-  @keyframes marker {
-    from { background-size: 0% 0.32em; }
-    to { background-size: 100% 0.32em; }
-  }
-  @keyframes reveal {
-    from { opacity: 0; transform: translateY(28px); }
-    to { opacity: 1; transform: none; }
   }
 }
 
@@ -116,8 +107,8 @@ body {
 }
 
 .font-display {
-  font-family: var(--font-display), var(--font-body), ui-sans-serif, sans-serif;
-  letter-spacing: -0.035em;
+  font-family: var(--font-body), ui-sans-serif, sans-serif;
+  letter-spacing: -0.025em;
 }
 
 .skeleton {
@@ -129,61 +120,15 @@ body {
 .progress-stripes {
   background-image: linear-gradient(
     -45deg,
-    rgb(0 0 0 / 0.12) 25%,
+    rgb(0 0 0 / 0.08) 25%,
     transparent 25%,
     transparent 50%,
-    rgb(0 0 0 / 0.12) 50%,
-    rgb(0 0 0 / 0.12) 75%,
+    rgb(0 0 0 / 0.08) 50%,
+    rgb(0 0 0 / 0.08) 75%,
     transparent 75%
   );
   background-size: 28px 28px;
   animation: var(--animate-stripes);
-}
-
-/* Hero backdrop: a soft accent glow over a dot grid that fades out toward the edges. */
-.hero-glow {
-  background:
-    radial-gradient(closest-side, color-mix(in srgb, var(--accent) 38%, transparent), transparent) 20% 30% / 55% 70% no-repeat,
-    radial-gradient(closest-side, color-mix(in srgb, var(--accent) 24%, transparent), transparent) 85% 15% / 45% 60% no-repeat;
-  animation: drift 18s ease-in-out infinite;
-}
-.dark .hero-glow {
-  opacity: 0.55;
-}
-.dot-grid {
-  background-image: radial-gradient(var(--border) 1.2px, transparent 1.2px);
-  background-size: 22px 22px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 35%, #000 30%, transparent 75%);
-}
-
-/* A highlighter stroke that sweeps under the hero's key phrase. */
-.marker {
-  background: linear-gradient(var(--accent), var(--accent)) 0 88% / 100% 0.32em no-repeat;
-  box-decoration-break: clone;
-  -webkit-box-decoration-break: clone;
-  animation: marker 0.9s 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both;
-}
-
-.float {
-  animation: bob 6s ease-in-out infinite;
-}
-
-.marquee {
-  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
-}
-.marquee-track {
-  animation: marquee 40s linear infinite;
-}
-
-/* Sections fade up as they scroll into view, where the browser can drive it without JS. */
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) {
-    .reveal {
-      animation: reveal linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 35%;
-    }
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

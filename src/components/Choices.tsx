@@ -18,8 +18,8 @@ export function Choices<T extends string | number>({ label, options, value, onCh
           role="radio"
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
-          className={`rounded-md border px-2.5 py-1 text-xs font-medium tabular-nums transition ${
-            value === option.value ? "border-text bg-text text-bg" : "border-border text-muted hover:text-text"
+          className={`rounded-full border px-3.5 py-1.5 text-xs font-bold tabular-nums transition ${
+            value === option.value ? "border-text bg-text text-bg" : "border-border bg-surface text-muted hover:text-text"
           }`}
         >
           {option.label}

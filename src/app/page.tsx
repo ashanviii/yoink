@@ -4,6 +4,7 @@ import { ArrowIcon } from "@/components/icons";
 import {
   FaqSection,
   Features,
+  GetStarted,
   JsonLd,
   PlatformGrid,
   Steps,
@@ -11,6 +12,7 @@ import {
   type PlatformLink,
   type SupportRow,
 } from "@/components/sections";
+import { Showcase } from "@/components/Showcase";
 import { HOME_FAQS } from "@/lib/landing-pages";
 import { site } from "@/lib/site";
 import { faqSchema, howToSchema, organizationSchema, webAppSchema, websiteSchema } from "@/lib/structured-data";
@@ -77,20 +79,22 @@ export default function Home() {
         highlight="the part you want"
         subtitle="Paste a Reel, TikTok, Facebook video, Snap or Pin. Trim it, crop it, speed it up, then save it as a video, GIF, sound or still. All on one screen, made for your phone."
       />
+      <Showcase />
       <Steps steps={STEPS} />
       <Features features={FEATURES} />
       <PlatformGrid links={PLATFORM_LINKS} />
       <SupportTable rows={SUPPORT_ROWS} />
-      <div className="mx-auto max-w-5xl px-4 pt-6 md:pl-[calc(13rem+2.5rem+1rem)]">
+      <div className="mx-auto max-w-6xl px-4 pt-8 sm:px-6">
         <Link
           href="/download-videos-from-social-media"
-          className="group inline-flex items-center gap-1.5 text-sm font-semibold underline decoration-border underline-offset-4 hover:decoration-text"
+          className="group inline-flex items-center gap-1.5 text-[15px] font-bold underline decoration-border decoration-2 underline-offset-4 hover:decoration-text"
         >
           Read the full guide to downloading and trimming videos from each platform, on iPhone, Android and desktop
           <ArrowIcon size={15} className="shrink-0 transition-transform group-hover:translate-x-0.5" />
         </Link>
       </div>
       <FaqSection faqs={HOME_FAQS} />
+      <GetStarted />
     </>
   );
 }

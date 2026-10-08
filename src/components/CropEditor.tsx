@@ -145,7 +145,7 @@ export function CropEditor({ durationSec, preview, width, height, onCropChange }
             aria-checked={shape === s.label}
             disabled={!!s.ratio && !frameAspect}
             onClick={() => pickShape(s.label)}
-            className={`rounded-md border px-2.5 py-1 text-xs font-medium transition disabled:opacity-40 ${
+            className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition disabled:opacity-40 ${
               shape === s.label ? "border-text bg-text text-bg" : "border-border text-muted hover:text-text"
             }`}
           >

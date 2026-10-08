@@ -30,9 +30,9 @@ export function ThemeToggle() {
       type="button"
       onClick={toggle}
       aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-      className="group relative grid size-10 place-items-center rounded-lg border border-border bg-surface text-text transition hover:-rotate-12 hover:border-text active:scale-90"
+      className="grid size-10 place-items-center rounded-full bg-surface-2 text-text transition hover:bg-border active:scale-90"
     >
-      <span className="transition-transform duration-300 group-active:rotate-90">
+      <span>
         {dark ? <SunIcon size={18} /> : <MoonIcon size={18} />}
       </span>
     </button>

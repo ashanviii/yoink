@@ -8,7 +8,7 @@ export default function NotFound() {
       <p className="mt-3 text-muted">The page you&apos;re after doesn&apos;t exist (anymore).</p>
       <Link
         href="/"
-        className="mt-8 inline-flex rounded-full bg-accent px-6 py-3 font-display font-bold text-accent-ink transition hover:-translate-y-0.5 active:scale-95"
+        className="mt-8 inline-flex h-12 items-center rounded-full bg-text px-7 font-bold text-bg transition hover:opacity-90 active:scale-95"
       >
         Back to the downloader
       </Link>

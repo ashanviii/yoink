@@ -50,7 +50,7 @@ export function JobRow({
   const stage = (status === "processing" && processingLabel) || STAGE_LABEL[status] || "Working…";
 
   return (
-    <li className="relative overflow-hidden rounded-lg border border-border bg-surface transition hover:border-text/40">
+    <li className="relative overflow-hidden rounded-2xl border border-border bg-surface transition hover:border-text/30">
       {busy && (
         <div
           className="progress-stripes absolute inset-y-0 left-0 bg-accent/70 transition-[width] duration-500 ease-out"
@@ -58,17 +58,17 @@ export function JobRow({
           aria-hidden
         />
       )}
-      <div className="relative flex items-center gap-3 p-3 pl-4">
+      <div className="relative flex items-center gap-3 py-3 pl-5 pr-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-base font-semibold">{label}</span>
+            <span className="text-base font-extrabold">{label}</span>
             {best && (
-              <span className="rounded bg-text px-1.5 py-0.5 text-[11px] font-semibold text-bg">
+              <span className="rounded-full bg-accent px-2 py-0.5 text-[11px] font-bold text-accent-ink">
                 Best
               </span>
             )}
             {badges.map((badge) => (
-              <span key={badge} className="rounded border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted">
+              <span key={badge} className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted">
                 {badge}
               </span>
             ))}
@@ -88,7 +88,7 @@ export function JobRow({
           <button
             type="button"
             onClick={saveAgain}
-            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-accent-ink"
+            className="flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-accent px-5 text-sm font-bold text-accent-ink"
           >
             <CheckIcon size={16} /> Save again
           </button>
@@ -98,7 +98,7 @@ export function JobRow({
             onClick={start}
             disabled={busy || !!unavailable}
             aria-label={`Download ${label} ${action}`}
-            className={`flex shrink-0 items-center gap-1.5 rounded-lg bg-text px-4 py-2.5 text-sm font-semibold text-bg transition hover:opacity-85 disabled:opacity-70 ${
+            className={`flex h-11 shrink-0 items-center gap-1.5 rounded-full bg-text px-5 text-sm font-bold text-bg transition hover:opacity-85 disabled:opacity-70 ${
               unavailable ? "disabled:cursor-not-allowed disabled:opacity-40" : "disabled:cursor-wait"
             }`}
           >
@@ -128,7 +128,7 @@ export function FormatRows({ option, edits, clipSec }: { option: MediaOption; ed
   const gifSec = clipSec / (edits.speed ?? 1);
   return (
     <>
-      <li className="px-1 pt-2 text-xs font-medium text-muted">Other formats</li>
+      <li className="px-1 pt-3 text-sm font-bold text-muted">Other formats</li>
       <JobRow
         recipe={option.recipe}
         params={{ ...edits, format: "gif" }}

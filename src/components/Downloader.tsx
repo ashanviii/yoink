@@ -127,11 +127,11 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
       <form onSubmit={onSubmit} noValidate className="relative" aria-label="Download media">
         <div
           key={shake}
-          className={`group relative flex items-center gap-2 rounded-xl border bg-surface p-1.5 pl-3 shadow-card transition-colors focus-within:border-text ${
+          className={`group relative flex items-center gap-2 rounded-full border-2 bg-surface p-2 pl-4 shadow-card transition-colors focus-within:border-text ${
             status === "error" ? "animate-shake border-danger" : "border-border"
           }`}
         >
-          <div className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-lg text-muted" aria-hidden>
+          <div className="grid size-8 shrink-0 place-items-center overflow-hidden rounded-xl text-muted" aria-hidden>
             {detected ? (
               <PlatformIcon platform={detected.id} size={32} className="size-full" />
             ) : (
@@ -160,14 +160,14 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
             }}
             aria-invalid={status === "error"}
             aria-describedby="media-url-status"
-            className="min-w-0 flex-1 bg-transparent py-3 text-base outline-none placeholder:text-muted/70"
+            className="min-w-0 flex-1 scroll-mt-32 bg-transparent py-3 text-base font-medium outline-none placeholder:font-normal placeholder:text-muted/80"
           />
           {input ? (
             <button
               type="button"
               onClick={clear}
               aria-label="Clear link"
-              className="grid size-9 shrink-0 place-items-center rounded-lg text-muted transition hover:bg-surface-2 hover:text-text"
+              className="grid size-10 shrink-0 place-items-center rounded-full text-muted transition hover:bg-surface-2 hover:text-text"
             >
               <XIcon size={16} />
             </button>
@@ -176,7 +176,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
               <button
                 type="button"
                 onClick={paste}
-                className="flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium text-muted transition hover:bg-surface-2 hover:text-text"
+                className="flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-2.5 text-sm font-semibold text-muted transition hover:bg-surface-2 hover:text-text"
               >
                 <ClipboardIcon size={15} /> Paste
               </button>
@@ -185,7 +185,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
           <button
             type="submit"
             disabled={loading}
-            className="hidden shrink-0 items-center gap-2 rounded-lg bg-accent px-5 py-2.5 text-[15px] font-semibold text-accent-ink transition hover:brightness-95 disabled:cursor-wait sm:flex"
+            className="hidden h-12 shrink-0 items-center gap-2 rounded-full bg-text px-6 text-[15px] font-bold text-bg transition hover:opacity-90 disabled:cursor-wait sm:flex"
           >
             {loading ? "Fetching…" : "Yoink it"}
             <ArrowIcon size={17} className={loading ? "animate-pulse" : ""} />
@@ -195,7 +195,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
         <button
           type="submit"
           disabled={loading}
-          className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-6 py-3.5 text-base font-semibold text-accent-ink transition active:brightness-95 disabled:cursor-wait sm:hidden"
+          className="mt-3 flex h-14 w-full items-center justify-center gap-2 rounded-full bg-text px-6 text-base font-bold text-bg transition active:opacity-90 disabled:cursor-wait sm:hidden"
         >
           {loading ? "Fetching…" : "Yoink it"}
           <ArrowIcon size={18} className={loading ? "animate-pulse" : ""} />
@@ -244,14 +244,14 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
 
 function ResultSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-surface p-4" role="status" aria-label="Fetching media">
+    <div className="rounded-[2rem] border border-border bg-surface p-4 sm:p-5" role="status" aria-label="Fetching media">
       <div className="grid gap-4 sm:grid-cols-[220px_1fr]">
-        <div className="skeleton aspect-video rounded-lg" />
+        <div className="skeleton aspect-video rounded-2xl" />
         <div className="space-y-3">
           <div className="skeleton h-6 w-3/4 rounded-md" />
           <div className="skeleton h-4 w-1/3 rounded-md" />
-          <div className="skeleton h-14 rounded-lg" />
-          <div className="skeleton h-14 rounded-lg" />
+          <div className="skeleton h-16 rounded-2xl" />
+          <div className="skeleton h-16 rounded-2xl" />
         </div>
       </div>
       <p className="mt-3 text-sm text-muted">Getting the available qualities…</p>

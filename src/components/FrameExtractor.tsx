@@ -180,7 +180,7 @@ export function FrameExtractor({ durationSec, preview, source, width, height, ac
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="space-y-3 rounded-lg border border-border bg-surface-2 p-3">
+      <div className="space-y-3 rounded-2xl bg-surface-2 p-4">
         {preview && sprite.status !== "error" && (
           <FramePreview sprite={sprite} preview={preview} at={at} duration={durationSec} aspect={aspect} active={active} />
         )}
@@ -221,7 +221,7 @@ export function FrameExtractor({ durationSec, preview, source, width, height, ac
               aria-checked={format === value}
               onClick={() => setFormat(value)}
               className={`rounded-full px-3.5 py-1 text-xs font-bold transition ${
-                format === value ? "bg-surface text-text shadow-sm" : "text-muted hover:text-text"
+                format === value ? "bg-text text-bg" : "text-muted hover:text-text"
               }`}
             >
               {value.toUpperCase()}

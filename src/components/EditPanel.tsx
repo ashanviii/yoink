@@ -15,9 +15,9 @@ interface Props {
 export function EditPanel({ label, enabled, onToggle, summary, children }: Props) {
   const id = useId();
   return (
-    <div className="rounded-lg border border-border bg-surface-2 p-3">
-      <label htmlFor={id} className="flex cursor-pointer items-center gap-2.5 text-sm font-semibold">
-        <input id={id} type="checkbox" checked={enabled} onChange={onToggle} className="size-4 cursor-pointer accent-[var(--accent)]" />
+    <div className="rounded-2xl bg-surface-2 px-4 py-3.5">
+      <label htmlFor={id} className="flex cursor-pointer items-center gap-3 text-[15px] font-bold">
+        <input id={id} type="checkbox" checked={enabled} onChange={onToggle} className="size-[18px] cursor-pointer accent-[var(--text)]" />
         {label}
         {enabled && summary && <span className="ml-auto font-mono text-xs font-normal text-muted">{summary}</span>}
       </label>

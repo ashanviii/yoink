@@ -12,8 +12,8 @@ export default function manifest(): ManifestWithShareTarget {
     description: site.description,
     start_url: "/",
     display: "standalone",
-    background_color: "#0b0b0f",
-    theme_color: "#a78bfa",
+    background_color: "#ffffff",
+    theme_color: "#ffc83d",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/apple-icon", sizes: "180x180", type: "image/png" },
