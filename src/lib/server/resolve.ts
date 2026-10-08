@@ -355,6 +355,29 @@ function previewSource(info: RawInfo): StreamRef | null {
   return pick ? streamRef(pick, info) : null;
 }
 
+/**
+ * The preview stream is often video-only (Instagram and Facebook split DASH audio out), so
+ * playing it would be silent. When the post has sound, play the smallest whole file that
+ * carries it instead: known video+audio renditions first, then files whose codecs yt-dlp
+ * couldn't read, which on those platforms are the muxed progressive downloads.
+ */
+function pickPlaybackFormat(info: RawInfo): RawFormat | undefined {
+  const preview = pickPreviewFormat(info);
+  const formats = formatsOf(info);
+  if ((preview && isSet(preview.acodec)) || !formats.some((f) => isSet(f.acodec))) return preview;
+  const files = formats.filter((f) => usable(f) && !isHls(f) && f.vcodec !== "none");
+  const muxed = files
+    .filter((f) => isSet(f.vcodec) && isSet(f.acodec))
+    .sort((a, b) => codecRank(b.vcodec) - codecRank(a.vcodec) || (a.height ?? 9999) - (b.height ?? 9999));
+  // yt-dlp lists formats worst to best, so the first unknown one is the smallest.
+  return muxed.find((f) => (f.height ?? 0) >= 240) ?? muxed[0] ?? files.find((f) => f.acodec == null) ?? preview;
+}
+
+function playbackSource(info: RawInfo): StreamRef | null {
+  const pick = pickPlaybackFormat(info);
+  return pick ? streamRef(pick, info) : null;
+}
+
 const MAX_PARALLEL_PROBES = 3;
 
 /**
@@ -402,6 +425,7 @@ function toItem(info: RawInfo, ctx: BuildContext): MediaItem | null {
     title: cleanTitle(info.title) ?? "Untitled",
     thumbnail: thumbnailProxyUrl(info.thumbnail),
     preview: previewSource(info),
+    playback: playbackSource(info),
     durationSec: info.duration ?? null,
     width: info.width || null,
     height: info.height || null,

@@ -7,17 +7,17 @@ import { PlayIcon } from "./icons";
 
 /**
  * Lets people watch the video before downloading. Nothing is fetched until they press play:
- * the small preview stream is tried straight from the CDN first, then through our proxy.
+ * the stream is tried straight from the CDN first, then through our proxy.
  * It fills its parent, which must be `relative`.
  */
-export function PreviewPlayer({ preview }: { preview: StreamRef | null }) {
+export function PreviewPlayer({ stream }: { stream: StreamRef | null }) {
   const [playing, setPlaying] = useState(false);
   // Index into the candidate URLs; moves on to the next source when one fails to load.
   const [attempt, setAttempt] = useState(0);
   const [failed, setFailed] = useState(false);
 
   // HLS needs a player library on most browsers, so only plain files get a play button.
-  if (!preview || preview.hls) return null;
+  if (!stream || stream.hls) return null;
 
   if (!playing) {
     return (
@@ -43,7 +43,7 @@ export function PreviewPlayer({ preview }: { preview: StreamRef | null }) {
     );
   }
 
-  const candidates = streamUrls(preview);
+  const candidates = streamUrls(stream);
   const source = candidates[attempt];
 
   return (

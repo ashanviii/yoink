@@ -118,6 +118,8 @@ export interface MediaItem {
   thumbnail: string | null;
   /** Small video-only stream the browser draws the filmstrip and frame previews from, or null. */
   preview: StreamRef | null;
+  /** What the play button plays: a whole file with sound when there is one, else the preview stream. */
+  playback: StreamRef | null;
   durationSec: number | null;
   width: number | null;
   height: number | null;

@@ -70,7 +70,7 @@ export function ResultCard({ item, uploader, index, total }: Props) {
             </span>
           )}
           {/* Last, so a playing video covers the badges instead of fighting its controls. */}
-          {kinds.includes("video") && <PreviewPlayer preview={item.preview} />}
+          {kinds.includes("video") && <PreviewPlayer stream={item.playback} />}
         </div>
 
         <div className="flex min-w-0 flex-col gap-3">
