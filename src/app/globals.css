@@ -9,7 +9,7 @@
   --text: #0e0e11;
   --muted: #5d5b66;
   --border: #e2ded3;
-  --accent: #c6ff3d;
+  --accent: #a78bfa;
   --accent-ink: #0e0e11;
   --danger: #d62d30;
   --ring: #0e0e11;
@@ -24,10 +24,10 @@
   --text: #f4f3f8;
   --muted: #a09fb0;
   --border: #2a2a36;
-  --accent: #c6ff3d;
+  --accent: #a78bfa;
   --accent-ink: #0b0b0f;
   --danger: #ff5c5f;
-  --ring: #c6ff3d;
+  --ring: #a78bfa;
   --shadow: 0 1px 2px rgb(0 0 0 / 0.4);
   color-scheme: dark;
 }

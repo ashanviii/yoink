@@ -28,7 +28,7 @@ export default function OpengraphImage() {
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3 }}>Get exactly</div>
-          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: "#c6ff3d" }}>
+          <div style={{ fontSize: 88, fontWeight: 800, lineHeight: 1, letterSpacing: -3, color: "#a78bfa" }}>
             the part you want.
           </div>
         </div>

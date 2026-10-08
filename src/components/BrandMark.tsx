@@ -6,7 +6,7 @@ export function BrandMark({ size, radius, glyph }: { size: number; radius: numbe
         width: size,
         height: size,
         borderRadius: radius,
-        background: "#c6ff3d",
+        background: "#a78bfa",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",

@@ -13,7 +13,7 @@ export default function manifest(): ManifestWithShareTarget {
     start_url: "/",
     display: "standalone",
     background_color: "#0b0b0f",
-    theme_color: "#c6ff3d",
+    theme_color: "#a78bfa",
     icons: [
       { src: "/icon.svg", sizes: "any", type: "image/svg+xml" },
       { src: "/apple-icon", sizes: "180x180", type: "image/png" },
