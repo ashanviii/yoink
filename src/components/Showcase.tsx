@@ -188,9 +188,8 @@ function PasteScreen() {
         <span className="size-4 rounded-[5px] bg-[#ffc83d]" />
         Yoinkit
       </div>
-      <div className="mt-12 text-center">
-        <span className="rounded-full bg-[#fff0c2] px-2.5 py-1 text-[10px] font-bold">Free · No sign-up</span>
-        <p className="mt-3 text-[25px] font-extrabold leading-[1.05] tracking-tight">Get exactly the part you want</p>
+      <div className="mt-14 text-center">
+        <p className="text-[25px] font-extrabold leading-[1.05] tracking-tight">Get exactly the part you want</p>
       </div>
       <div className="mt-7 flex h-11 items-center gap-2 rounded-full border-2 border-[#ebe5d8] px-3.5 text-[12px] font-semibold">
         <LinkIcon size={14} className="shrink-0 text-[#6b665c]" />

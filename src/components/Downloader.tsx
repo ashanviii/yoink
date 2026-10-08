@@ -214,7 +214,7 @@ export function Downloader({ placeholder = "Paste a Reel, TikTok, Facebook, Snap
             </p>
           ) : (
             <p className="text-muted">
-              {platform ? `Works with any public ${PLATFORMS[platform].name} link.` : "Public links only."}
+              {platform ? `Free, no sign-up. Works with any public ${PLATFORMS[platform].name} link.` : "Free, no sign-up. Public links only."}
             </p>
           )}
         </div>

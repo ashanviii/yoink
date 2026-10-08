@@ -15,12 +15,11 @@ const PLATFORMS: PlatformId[] = ["instagram", "tiktok", "facebook", "snapchat", 
 
 export function Hero({ title, highlight, subtitle, placeholder, platform }: Props) {
   return (
-    <section className="mx-auto max-w-3xl px-4 pb-2 pt-10 text-center sm:px-6 sm:pt-16">
-      <p className="inline-flex rounded-full bg-accent-soft px-4 py-1.5 text-sm font-bold">Free · No sign-up · Made for your phone</p>
-      <h1 className="mx-auto mt-5 font-display text-[2.6rem] font-extrabold leading-[1.04] sm:text-[4.25rem]">
+    <section className="mx-auto max-w-3xl px-4 pb-2 pt-12 text-center sm:px-6 sm:pt-20">
+      <h1 className="mx-auto text-balance font-display text-[2.6rem] font-extrabold leading-[1.04] sm:text-[4.25rem]">
         {highlight ? `${title} ${highlight}` : title}
       </h1>
-      <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-muted">{subtitle}</p>
+      <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted">{subtitle}</p>
       <div className="mt-9 text-left">
         <Downloader placeholder={placeholder} platform={platform} />
       </div>

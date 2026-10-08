@@ -8,7 +8,7 @@ import { ArrowIcon, PlatformIcon } from "./icons";
 export function Section({ title, id, intro, children }: { title: string; id: string; intro?: ReactNode; children: ReactNode }) {
   return (
     <section aria-labelledby={id} className="mx-auto max-w-6xl px-4 pt-20 sm:px-6 sm:pt-28">
-      <h2 id={id} className="max-w-2xl font-display text-[2rem] font-extrabold leading-[1.08] sm:text-[2.75rem]">
+      <h2 id={id} className="max-w-2xl text-balance font-display text-[2rem] font-extrabold leading-[1.08] sm:text-[2.75rem]">
         {title}
       </h2>
       {intro && <div className="mt-4 max-w-2xl text-lg leading-relaxed text-muted">{intro}</div>}
